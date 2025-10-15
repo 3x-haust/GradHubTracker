@@ -11,6 +11,6 @@ RUN mv node_modules ../
 
 COPY . .
 
-EXPOSE 2095
+EXPOSE 2082
 
 CMD ["yarn", "dev"]
