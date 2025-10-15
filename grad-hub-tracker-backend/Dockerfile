@@ -11,4 +11,4 @@ COPY . .
 RUN yarn build
 
 EXPOSE 2053
-CMD ["node", "dist/src/main"]
+CMD ["node", "dist/main"]
