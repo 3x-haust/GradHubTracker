@@ -20,6 +20,9 @@ export default function Dashboard() {
   const me = useAuth((s) => s.me)
   const [stats, setStats] = useState([
     { title: "등록 졸업생", value: "-", description: "전체 등록된 졸업생 수", icon: Users, trend: "" },
+    { title: "취업률", value: "-", description: "전체 대비 재직중 비율", icon: Briefcase, trend: "" },
+    { title: "진학률", value: "-", description: "전체 대비 재학중 비율", icon: Briefcase, trend: "" },
+    { title: "구직중", value: "-", description: "현재 구직중인 인원 수", icon: Search, trend: "" },
   ]);
   const [activities, setActivities] = useState<Activity[]>([]);
   useEffect(() => {
@@ -30,7 +33,14 @@ export default function Dashboard() {
         const grads = await api<{ items: unknown[]; total: number; page: number; pageSize: number }>(`/graduates?page=1`)
         if (!mounted) return
         const total = grads.total
-        setStats([{ title: "등록 졸업생", value: total.toLocaleString(), description: "전체 등록된 졸업생 수", icon: Users, trend: total > 0 ? `+${total}` : "0" }])
+        const s = await api<{ total: number; employed: number; employedRate: number; furtherStudy: number; furtherStudyRate: number; jobSeeking: number }>(`/graduates/stats`)
+        if (!mounted) return
+        setStats([
+          { title: "등록 졸업생", value: total.toLocaleString(), description: "전체 등록된 졸업생 수", icon: Users, trend: total > 0 ? `+${total}` : "0" },
+          { title: "취업률", value: `${s.employedRate}%`, description: `취업 ${s.employed.toLocaleString()}명 / 전체 ${s.total.toLocaleString()}명`, icon: Briefcase, trend: s.total > 0 ? `${s.employed >= 0 ? '+' : ''}${s.employed}` : "0" },
+          { title: "진학률", value: `${s.furtherStudyRate}%`, description: `진학 ${s.furtherStudy.toLocaleString()}명 / 전체 ${s.total.toLocaleString()}명`, icon: Briefcase, trend: s.total > 0 ? `${s.furtherStudy >= 0 ? '+' : ''}${s.furtherStudy}` : "0" },
+          { title: "구직중", value: s.jobSeeking.toLocaleString(), description: "현재 구직중인 인원 수", icon: Search, trend: s.total > 0 ? `${Math.round((s.jobSeeking / s.total) * 100)}%` : "0%" },
+        ])
 
         const logs = await api<{ items: { type: string; message: string; at: string }[]; total: number }>(`/activity-logs?limit=10`)
         if (!mounted) return
@@ -41,7 +51,12 @@ export default function Dashboard() {
         setActivities(acts)
       } catch {
         if (!mounted) return
-        setStats([{ title: "등록 졸업생", value: "-", description: "전체 등록된 졸업생 수", icon: Users, trend: "" }])
+        setStats([
+          { title: "등록 졸업생", value: "-", description: "전체 등록된 졸업생 수", icon: Users, trend: "" },
+          { title: "취업률", value: "-", description: "전체 대비 재직중 비율", icon: Briefcase, trend: "" },
+          { title: "진학률", value: "-", description: "전체 대비 재학중 비율", icon: Briefcase, trend: "" },
+          { title: "구직중", value: "-", description: "현재 구직중인 인원 수", icon: Search, trend: "" },
+        ])
         setActivities([])
       }
     })()

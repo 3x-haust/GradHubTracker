@@ -11,6 +11,7 @@ import { Graduate } from './graduate.entity';
 import { CreateGraduateDto } from './dto/create-graduate.dto';
 import { UpdateGraduateDto } from './dto/update-graduate.dto';
 import { ActivityLogsService } from '../activity-logs/activity-logs.service';
+import { StatusEnum } from '../common/enums';
 
 @Injectable()
 export class GraduatesService {
@@ -162,5 +163,34 @@ export class GraduatesService {
       message: `${g.name} 졸업생의 사진을 삭제했습니다`,
     });
     return saved;
+  }
+
+  async getStats() {
+    const total = await this.repo.count();
+    const employed = await this.repo
+      .createQueryBuilder('g')
+      .where(':s = ANY(g.currentStatus)', { s: StatusEnum.재직중 })
+      .getCount();
+    const furtherStudy = await this.repo
+      .createQueryBuilder('g')
+      .where(':s = ANY(g.currentStatus)', { s: StatusEnum.재학중 })
+      .getCount();
+    const jobSeeking = await this.repo
+      .createQueryBuilder('g')
+      .where(':s = ANY(g.currentStatus)', { s: StatusEnum.구직중 })
+      .getCount();
+
+    const employedRate =
+      total > 0 ? Math.round((employed / total) * 1000) / 10 : 0;
+    const furtherStudyRate =
+      total > 0 ? Math.round((furtherStudy / total) * 1000) / 10 : 0;
+    return {
+      total,
+      employed,
+      employedRate,
+      furtherStudy,
+      furtherStudyRate,
+      jobSeeking,
+    };
   }
 }

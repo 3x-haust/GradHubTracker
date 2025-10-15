@@ -41,6 +41,11 @@ export class GraduatesController {
     return this.service.findAll({ page: page ? Number(page) : 1, q });
   }
 
+  @Get('stats')
+  stats() {
+    return this.service.getStats();
+  }
+
   @Get(':id')
   get(@Param('id') id: string) {
     return this.service.findOne(id);
