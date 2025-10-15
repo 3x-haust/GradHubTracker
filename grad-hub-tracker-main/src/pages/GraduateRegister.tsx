@@ -1,0 +1,574 @@
+import { useEffect, useMemo, useRef, useState } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { UserPlus, Upload, Trash2 } from "lucide-react"
+import GraduateForm from "@/components/forms/GraduateForm"
+import { useGraduates } from "@/stores/graduates"
+import { useAuth } from "@/stores/auth"
+import { GraduateRecord, DesiredField, StatusOption, AttendanceLevel, Gender } from "@/lib/types"
+import { v4 as uuidv4 } from "uuid"
+import ExcelJS from "exceljs"
+import * as XLSX from "xlsx"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
+import { apiForm } from "@/lib/api"
+import { Badge } from "@/components/ui/badge"
+
+export default function GraduateRegister() {
+  const [showForm, setShowForm] = useState(false)
+  const items = useGraduates((s) => s.items)
+  const fetch = useGraduates((s) => s.fetch)
+  const [recent, setRecent] = useState(items.slice(0, 5))
+  const validated = useAuth((s) => s.validated)
+  const me = useAuth((s) => s.me)
+  const fileRef = useRef<HTMLInputElement | null>(null)
+  const [importSummary, setImportSummary] = useState<{ success: number; failed: number; errors: string[] }>({ success: 0, failed: 0, errors: [] })
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [stagedFiles, setStagedFiles] = useState<File[]>([])
+  const [matchMode, setMatchMode] = useState<'phone'|'email'|'name_birthDate'>('phone')
+  const [overwrite, setOverwrite] = useState(true)
+  const [uploadingPhotos, setUploadingPhotos] = useState(false)
+  const [bulkResults, setBulkResults] = useState<Array<{ filename: string; ok: boolean; matchedId?: string; reason?: string }>>([])
+  const photoInputRef = useRef<HTMLInputElement | null>(null)
+
+  useEffect(() => {
+    setRecent(items.slice(0, 5))
+  }, [showForm, items])
+
+  useEffect(() => {
+    (async () => {
+      if (!validated || !me || me.approved === false) return
+      try {
+        await fetch({ page: 1 })
+      } catch {
+        // ignore
+      }
+    })()
+  }, [validated, me, fetch])
+
+  if (showForm) {
+    return <GraduateForm onBack={() => setShowForm(false)} />
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-3xl font-bold text-foreground mb-2">졸업생 등록</h2>
+        <p className="text-muted-foreground">
+          새로운 졸업생을 시스템에 등록합니다
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="bg-gradient-card shadow-card cursor-pointer hover:shadow-elevated transition-all">
+          <CardHeader>
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center mb-4">
+              <UserPlus className="h-6 w-6 text-white" />
+            </div>
+            <CardTitle>개별 등록</CardTitle>
+            <CardDescription>
+              졸업생 한 명씩 개별로 등록합니다
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              className="w-full bg-gradient-primary"
+              onClick={() => setShowForm(true)}
+            >
+              등록 양식 열기
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-card shadow-card cursor-pointer hover:shadow-elevated transition-all">
+          <CardHeader>
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center mb-4">
+              <Upload className="h-6 w-6 text-white" />
+            </div>
+            <CardTitle>엑셀 일괄 업로드</CardTitle>
+            <CardDescription>
+              엑셀 파일을 업로드하여 여러 명을 한번에 등록합니다
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              variant="outline"
+              className="w-full mt-2"
+              onClick={async () => {
+                await downloadXlsxTemplate()
+              }}
+            >
+              엑셀 템플릿 다운로드
+            </Button>
+            <Button
+              className="w-full mt-2 bg-gradient-primary"
+              onClick={() => fileRef.current?.click()}
+            >
+              엑셀 파일 업로드
+            </Button>
+            <input
+              type="file"
+              ref={fileRef}
+              accept=".csv,.xlsx"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                try {
+                  let rows: string[][]
+                  if (file.name.toLowerCase().endsWith('.xlsx')) {
+                    rows = await parseXlsx(await file.arrayBuffer())
+                  } else {
+                    const text = await file.text()
+                    rows = parseCSV(text)
+                  }
+                  const header = rows.shift() || []
+                  const expectedFirst = "졸업연도"
+                  let success = 0
+                  let failed = 0
+                  const errors: string[] = []
+                  if (header[0] !== expectedFirst) {
+                    errors.push("템플릿 형식이 올바르지 않습니다. 템플릿을 다시 다운로드 해주세요.")
+                  } else {
+                    for (let i = 0; i < rows.length; i++) {
+                      const r = rows[i]
+                      if (r.length === 0 || r.every((c) => c.trim() === "")) continue
+                      try {
+                        const rec = mapRowToGraduate(r)
+                        await useGraduates.getState().create(rec as unknown as Omit<GraduateRecord, 'id' | 'createdAt' | 'updatedAt'>)
+                        success++
+                      } catch (err: unknown) {
+                        const msg = err instanceof Error ? err.message : String(err)
+                        failed++
+                        errors.push(`${i + 2}행 처리 실패: ${msg || "알 수 없는 오류"}`)
+                      }
+                    }
+                  }
+                  setImportSummary({ success, failed, errors })
+                  await fetch({ page: 1 })
+                  setRecent(useGraduates.getState().items.slice(0, 5))
+                } catch (err: unknown) {
+                  const msg = err instanceof Error ? err.message : String(err)
+                  setImportSummary({ success: 0, failed: 0, errors: [msg || "파일을 읽는 중 오류가 발생했습니다."] })
+                } finally {
+                  if (fileRef.current) fileRef.current.value = ""
+                }
+              }}
+            />
+            {(importSummary.success > 0 || importSummary.failed > 0 || importSummary.errors.length > 0) && (
+              <div className="mt-4 text-sm">
+                <div className="text-foreground">가져오기 완료: {importSummary.success}건</div>
+                {importSummary.failed > 0 && (
+                  <div className="text-muted-foreground">실패: {importSummary.failed}건</div>
+                )}
+                {importSummary.errors.length > 0 && (
+                  <ul className="mt-2 list-disc list-inside text-muted-foreground space-y-1 max-h-32 overflow-auto">
+                    {importSummary.errors.map((e, idx) => (
+                      <li key={idx}>{e}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="bg-gradient-card shadow-card">
+        <CardHeader>
+          <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-rose-500 to-pink-500 flex items-center justify-center mb-4">
+            <Upload className="h-6 w-6 text-white" />
+          </div>
+          <CardTitle>사진 일괄 업로드</CardTitle>
+          <CardDescription>
+            파일명을 기준으로 졸업생과 자동 매칭합니다. jpg/png, 각 3MB 이하. 매칭 규칙은 아래에서 선택하세요.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div>
+              <Label className="text-sm font-medium mb-2 block">매칭 방식</Label>
+              <Select value={matchMode} onValueChange={(v) => setMatchMode(v as typeof matchMode)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="매칭 방식 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="phone">전화번호 (파일명=01012345678)</SelectItem>
+                  <SelectItem value="email">이메일 (파일명=user@example.com)</SelectItem>
+                  <SelectItem value="name_birthDate">이름+생년월일 (홍길동_2001-10-03 또는 홍길동-20011003)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-end gap-2">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">기존 사진 덮어쓰기</Label>
+                <div className="flex items-center gap-2">
+                  <Switch checked={overwrite} onCheckedChange={setOverwrite} />
+                  <span className="text-sm text-muted-foreground">켜면 기존 사진이 있더라도 교체합니다</span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <Label className="text-sm font-medium mb-2 block">사진 파일 선택</Label>
+              <Input
+                type="file"
+                accept=".jpg,.jpeg,.png"
+                multiple
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || [])
+                  setSelectedFiles(files)
+                }}
+                ref={photoInputRef}
+              />
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2 items-center">
+            <Button
+              variant="outline"
+              disabled={selectedFiles.length === 0}
+              onClick={() => {
+                setStagedFiles((prev) => [...prev, ...selectedFiles])
+                setSelectedFiles([])
+                if (photoInputRef.current) photoInputRef.current.value = ''
+              }}
+            >
+              추가 ({selectedFiles.length}개)
+            </Button>
+            <Button
+              className="bg-gradient-primary"
+              disabled={uploadingPhotos || stagedFiles.length === 0}
+              onClick={async () => {
+                if (stagedFiles.length === 0) return
+                const batch = stagedFiles.slice(0, Math.min(2, stagedFiles.length))
+                setUploadingPhotos(true)
+                try {
+                  const fd = new FormData()
+                  batch.forEach((f) => fd.append('files', f))
+                  const actor = me?.sub
+                  const qs = new URLSearchParams({ match: matchMode, overwrite: overwrite ? '1' : '0', ...(actor ? { actor } : {}) })
+                  const res = await apiForm<{ ok: boolean; count: number; results: { filename: string; ok: boolean; matchedId?: string; reason?: string }[] }>(
+                    `/graduates/photos/bulk?${qs.toString()}`,
+                    fd,
+                    'POST'
+                  )
+                  setBulkResults((prev) => [...prev, ...(res.results || [])])
+                  setStagedFiles((prev) => prev.slice(batch.length))
+                  await fetch({ page: 1 })
+                  setRecent(useGraduates.getState().items.slice(0, 5))
+                } catch (e) {
+                  alert('업로드 중 문제가 발생했습니다.')
+                } finally {
+                  setUploadingPhotos(false)
+                }
+              }}
+            >
+              {uploadingPhotos ? '업로드 중…' : `${stagedFiles.length}개 업로드`}
+            </Button>
+            <Button variant="ghost" onClick={() => { setSelectedFiles([]); setStagedFiles([]); setBulkResults([]); if (photoInputRef.current) photoInputRef.current.value = '' }}>초기화</Button>
+          </div>
+          {(selectedFiles.length > 0 || stagedFiles.length > 0) && (
+            <div className="mt-3 text-xs text-muted-foreground">
+              <div>선택됨: {selectedFiles.length}개 · 업로드 대기: {stagedFiles.length}개</div>
+            </div>
+          )}
+          {stagedFiles.length > 0 && (
+            <div className="mt-3">
+              <div className="text-sm font-medium mb-2">업로드 대기 목록</div>
+              <div className="max-h-48 overflow-auto border rounded-md">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-muted">
+                      <th className="text-left p-2 w-12">#</th>
+                      <th className="text-left p-2">파일명</th>
+                      <th className="text-left p-2 w-24">크기</th>
+                      <th className="text-left p-2 w-16">삭제</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stagedFiles.map((f, idx) => (
+                      <tr key={`${f.name}-${idx}`} className="border-t">
+                        <td className="p-2">{idx + 1}</td>
+                        <td className="p-2 truncate max-w-[320px]" title={f.name}>{f.name}</td>
+                        <td className="p-2">{Math.ceil(f.size / 1024)} KB</td>
+                        <td className="p-2">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => setStagedFiles((prev) => prev.filter((_, i) => i !== idx))}
+                            aria-label="삭제"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+          {bulkResults.length > 0 && (
+            <div className="mt-4 text-sm">
+              <div className="text-foreground mb-2">처리 결과: {bulkResults.filter(r => r.ok).length}건 성공 / {bulkResults.filter(r => !r.ok).length}건 실패</div>
+              <div className="max-h-60 overflow-auto border rounded-md">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-muted">
+                      <th className="text-left p-2">파일명</th>
+                      <th className="text-left p-2">결과</th>
+                      <th className="text-left p-2">졸업생 ID</th>
+                      <th className="text-left p-2">사유</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bulkResults.map((r, idx) => (
+                      <tr key={idx} className="border-t">
+                        <td className="p-2">{r.filename}</td>
+                        <td className="p-2">
+                          {r.ok ? <span className="text-green-600">성공</span> : <span className="text-red-600">실패</span>}
+                        </td>
+                        <td className="p-2">{r.matchedId || '-'}</td>
+                        <td className="p-2">{r.reason || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="bg-gradient-card shadow-card">
+        <CardHeader>
+          <CardTitle>최근 등록된 졸업생</CardTitle>
+          <CardDescription>가장 최근에 등록된 졸업생들입니다</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {recent.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">등록된 졸업생이 없습니다.</p>
+          ) : (
+            <div className="space-y-4">
+              {recent.map((g) => (
+                <div key={g.id} className="flex items-start gap-4 border rounded-lg p-4">
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={g.photoUrl || ""} alt={g.name} />
+                    <AvatarFallback className="bg-gradient-primary text-white">
+                      {g.name.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">{g.name}</span>
+                      <Badge variant="secondary">{g.graduationYear} 졸업</Badge>
+                      <Badge variant="outline">{g.department}</Badge>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {g.phone} · {g.email}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+const desiredAllow: DesiredField[] = ["제조", "사무", "피부미용", "간호", "보안", "서비스", "기타"]
+const statusAllow: StatusOption[] = ["구직중", "교육중", "재학중", "재직중", "군복무"]
+const attendanceAllow: AttendanceLevel[] = ["상", "중", "하"]
+const genderAllow: Gender[] = ["남", "여"]
+const departments = ["유헬스시스템과", "유헬스디자인과", "의료IT과", "보건간호과", "3D콘텐츠디자인과", "건강과학과", "의료미용과"]
+
+function parseCSV(text: string): string[][] {
+  const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n")
+  const rows: string[][] = []
+  for (const line of lines) {
+    if (line === "") {
+      rows.push([])
+      continue
+    }
+    const cells: string[] = []
+    let cur = ""
+    let inQuotes = false
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i]
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          cur += '"'
+          i++
+        } else {
+          inQuotes = !inQuotes
+        }
+      } else if (ch === "," && !inQuotes) {
+        cells.push(cur)
+        cur = ""
+      } else {
+        cur += ch
+      }
+    }
+    cells.push(cur)
+    rows.push(cells.map((c) => c.trim()))
+  }
+  return rows
+}
+
+async function downloadXlsxTemplate() {
+  const wb = new ExcelJS.Workbook()
+  const ws = wb.addWorksheet('졸업생등록')
+  const lists = wb.addWorksheet('목록')
+  lists.state = 'veryHidden'
+
+  lists.getCell('A1').value = '졸업학과'
+  departments.forEach((d, i) => lists.getCell(`A${i + 2}`).value = d)
+  lists.getCell('B1').value = '성별'
+  genderAllow.forEach((g, i) => lists.getCell(`B${i + 2}`).value = g)
+  lists.getCell('C1').value = '근태'
+  attendanceAllow.forEach((a, i) => lists.getCell(`C${i + 2}`).value = a)
+  lists.getCell('D1').value = '희망분야'
+  desiredAllow.forEach((d, i) => lists.getCell(`D${i + 2}`).value = d)
+  lists.getCell('E1').value = '현재상태'
+  statusAllow.forEach((s, i) => lists.getCell(`E${i + 2}`).value = s)
+  lists.getCell('F1').value = '졸업연도'
+  const yearNow = new Date().getFullYear()
+  const yearStart = yearNow - 10
+  const years: number[] = []
+  for (let y = yearStart; y <= yearNow + 1; y++) years.push(y)
+  years.forEach((y, i) => lists.getCell(`F${i + 2}`).value = y)
+
+  const header = [
+    "졸업연도",
+    "이름",
+    "성별",
+    "생년월일(YYYY-MM-DD)",
+    "연락처(010-1234-5678)",
+    "주소",
+    "졸업학과",
+    "성적(%)",
+    "근태(상/중/하)",
+    "자격증(쉼표구분)",
+    "이메일",
+    "취업처/기간(예: 회사명:2024.01-2024.12;세미콜론구분)",
+    "대학명/기간(예: 대학명:2024.03-2028.02;세미콜론구분)",
+    "희망분야(복수,쉼표)",
+    "현재상태(복수,쉼표)",
+    "메모",
+  ]
+  ws.addRow(header)
+  ws.getRow(1).font = { bold: true }
+  ws.columns = header.map(h => ({ width: Math.max(14, h.length + 4) }))
+
+  const maxRow = 1000
+  type DVRule = { type: 'list'; allowBlank?: boolean; formulae: string[] }
+  interface WorksheetWithDV { dataValidations: { add: (range: string, rule: DVRule) => void } }
+  const wsDV = ws as unknown as WorksheetWithDV
+  wsDV.dataValidations.add(`C2:C${maxRow}`, { type: 'list', allowBlank: true, formulae: ['=목록!$B$2:$B$3'] })
+  wsDV.dataValidations.add(`I2:I${maxRow}`, { type: 'list', allowBlank: true, formulae: ['=목록!$C$2:$C$4'] })
+  wsDV.dataValidations.add(`G2:G${maxRow}`, { type: 'list', allowBlank: true, formulae: [`=목록!$A$2:$A$${departments.length + 1}`] })
+  wsDV.dataValidations.add(`N2:N${maxRow}`, { type: 'list', allowBlank: true, formulae: [`=목록!$D$2:$D$${desiredAllow.length + 1}`] })
+  wsDV.dataValidations.add(`O2:O${maxRow}`, { type: 'list', allowBlank: true, formulae: [`=목록!$E$2:$E$${statusAllow.length + 1}`] })
+  wsDV.dataValidations.add(`A2:A${maxRow}`, { type: 'list', allowBlank: true, formulae: [`=목록!$F$2:$F$${years.length + 1}`] })
+
+  const buffer = await wb.xlsx.writeBuffer()
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'graduates_template.xlsx'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+async function parseXlsx(ab: ArrayBuffer): Promise<string[][]> {
+  const wb = XLSX.read(ab, { type: 'array' })
+  const sheetName = wb.SheetNames[0]
+  const ws = wb.Sheets[sheetName]
+  const aoa = XLSX.utils.sheet_to_json(ws, { header: 1 }) as unknown as (string | number | boolean | null | undefined)[][]
+  const rows = Array.isArray(aoa) ? aoa : []
+  return rows.map((row) => row.map((c) => (c == null ? '' : String(c))))
+}
+
+function mapRowToGraduate(r: string[]): GraduateRecord {
+  const [
+    graduationYear,
+    name,
+    gender,
+    birthDate,
+    phone,
+    address,
+    department,
+    grade,
+    attendance,
+    certificates,
+    email,
+    employment,
+    education,
+    desired,
+    status,
+    memo,
+  ] = r
+
+  const nowIso = new Date().toISOString()
+  const desiredList = (desired || "").split(",").map((s) => s.trim()).filter((s): s is DesiredField => desiredAllow.includes(s as DesiredField))
+  const statusList = (status || "").split(",").map((s) => s.trim()).filter((s): s is StatusOption => statusAllow.includes(s as StatusOption))
+  const certList = (certificates || "").split(",").map((s) => s.trim()).filter(Boolean)
+
+  return {
+    id: uuidv4(),
+    photoUrl: undefined,
+    graduationYear: Number(graduationYear) || new Date().getFullYear(),
+    name: name || "",
+    gender: genderAllow.includes(gender as Gender) ? (gender as Gender) : "남",
+    birthDate: birthDate || "",
+    phone: phone || "",
+    address: address || "",
+    department: department || "",
+    grade: Number(grade) || 0,
+    attendance: attendanceAllow.includes(attendance as AttendanceLevel) ? (attendance as AttendanceLevel) : "중",
+    certificates: certList,
+    email: email || "",
+    employmentHistory: parseEmploymentPairs(employment),
+    educationHistory: parseEducationPairs(education),
+    desiredField: desiredList,
+    currentStatus: statusList,
+    memo: memo || "",
+    createdAt: nowIso,
+    updatedAt: nowIso,
+  }
+}
+
+function parseEmploymentPairs(input: string): { company: string; period: string }[] {
+  if (!input) return []
+  return input
+    .split(";")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((pair) => {
+      const [company, period] = pair.split(":")
+      return {
+        company: (company || "").trim(),
+        period: (period || "").trim(),
+      }
+    })
+}
+
+function parseEducationPairs(input: string): { school: string; period: string }[] {
+  if (!input) return []
+  return input
+    .split(";")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((pair) => {
+      const [school, period] = pair.split(":")
+      return {
+        school: (school || "").trim(),
+        period: (period || "").trim(),
+      }
+    })
+}

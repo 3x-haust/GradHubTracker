@@ -1,0 +1,47 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres-db
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME}
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+    ports:
+      - "${DATABASE_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  nestjs:
+    build: 
+      context: ./grad-hub-tracker-backend
+      dockerfile: ./grad-hub-tracker-backend/Dockerfile
+    container_name: nestjs-app
+    ports:
+      - "${PORT_NESTJS}:3000"
+    networks:
+      - app-network
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+
+  react:
+    build:
+      context: ./grad-hub-tracker-main
+      dockerfile: ./grad-hub-tracker-main/Dockerfile
+    container_name: react-app
+    ports:
+      - "${PORT_REACT}:5173"
+    env_file:
+      - ./grad-hub-tracker-main/.env
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
