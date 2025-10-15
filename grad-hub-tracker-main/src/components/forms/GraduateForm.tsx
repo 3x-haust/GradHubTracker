@@ -26,7 +26,10 @@ const graduateSchema = z.object({
   name: z.string().min(1, "이름을 입력해주세요").regex(/^[가-힣]+$/, "한글만 입력 가능합니다"),
   gender: z.string().min(1, "성별을 선택해주세요"),
   birthDate: z.date({ required_error: "생년월일을 선택해주세요" }),
-  phone: z.string().min(1, "연락처를 입력해주세요"),
+  phone: z
+    .string()
+    .min(1, "연락처를 입력해주세요")
+    .regex(/^010-\d{4}-\d{4}$/, "전화번호 형식은 010-1234-5678 이어야 합니다"),
   address: z.string().min(1, "주소를 입력해주세요"),
   department: z.string().min(1, "졸업학과를 선택해주세요"),
   grade: z.number().min(0).max(100, "성적은 0-100% 사이여야 합니다"),

@@ -18,7 +18,10 @@ const schema = z.object({
   name: z.string().min(1).regex(/^[가-힣]+$/),
   gender: z.enum(["남", "여"]),
   birthDate: z.string().min(4),
-  phone: z.string().min(1),
+  phone: z
+    .string()
+    .min(1)
+    .regex(/^010-\d{4}-\d{4}$/, "전화번호 형식은 010-1234-5678 이어야 합니다"),
   email: z.string().email().optional().or(z.literal("")).transform((v) => (v === "" ? undefined : v)),
   address: z.string().min(1),
   department: z.string().min(1),
