@@ -8,7 +8,6 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 2082,
-    allowedHosts: ['youngnak.3xhaust.dev']
   },
   plugins: [
     react(),
@@ -19,5 +18,8 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+  },
+  preview: {
+    allowedHosts: ["youngnak.3xhaust.dev"]
   },
 }));
