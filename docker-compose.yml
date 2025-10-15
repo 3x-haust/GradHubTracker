@@ -20,26 +20,26 @@ services:
   nestjs:
     build: 
       context: ./grad-hub-tracker-backend
-      dockerfile: ./grad-hub-tracker-backend/Dockerfile
+      dockerfile: Dockerfile
     container_name: grad-hub-tracker-backend
     ports:
       - "2053:2053"
     networks:
       - app-network
     env_file:
-      - ./grad-hub-tracker-backend/.env
+      - .env
     depends_on:
       - postgres
 
   react:
     build:
       context: ./grad-hub-tracker-main
-      dockerfile: ./grad-hub-tracker-main/Dockerfile
+      dockerfile: Dockerfile
     container_name: grad-hub-tracker-frontend
     ports:
       - "2082:2082"
     env_file:
-      - ./grad-hub-tracker-main/.env
+      - .env
 
 networks:
   app-network:
