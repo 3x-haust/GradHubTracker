@@ -44,8 +44,6 @@ async function bootstrap() {
     }),
   );
 
-  // Custom global exception filter can be added later when needed.
-
   await app.listen(process.env.PORT ? Number(process.env.PORT) : 3000);
 }
 void bootstrap();

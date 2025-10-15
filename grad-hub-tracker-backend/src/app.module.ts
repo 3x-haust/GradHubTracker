@@ -18,6 +18,8 @@ import { UsersModule } from './users/users.module';
         synchronize: false,
         autoLoadEntities: true,
         logging: process.env.NODE_ENV === 'development',
+        retryAttempts: 10,
+        retryDelay: 3000,
       }),
     }),
     ServeStaticModule.forRoot({
