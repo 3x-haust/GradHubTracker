@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 2082,
+    allowedHosts: ['suggestion.mmhs.app']
   },
   plugins: [
     react(),
