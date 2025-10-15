@@ -4,6 +4,7 @@ WORKDIR /app
 
 COPY package.json yarn.loc*k ./
 
+RUN yarn config set registry https://registry.npmmirror.com/
 RUN yarn install --production
 RUN yarn global add vite
 RUN yarn add @vitejs/plugin-react
