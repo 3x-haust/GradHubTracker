@@ -14,8 +14,6 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - app-network
-    env_file:
-      - ./grad-hub-tracker-backend/.env
 
   nestjs:
     build: 
