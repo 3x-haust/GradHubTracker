@@ -29,6 +29,8 @@ services:
       - .env
     depends_on:
       - postgres
+    tty: true 
+    stdin_open: true
 
   react:
     build:
@@ -42,6 +44,8 @@ services:
       - app-network
     env_file:
       - .env
+    tty: true 
+    stdin_open: true
 
 networks:
   app-network:
