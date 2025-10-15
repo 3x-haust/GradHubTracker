@@ -8,7 +8,7 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 2082,
-    allowedHosts: ['suggestion.mmhs.app']
+    allowedHosts: ['youngnak.3xhaust.dev']
   },
   plugins: [
     react(),
