@@ -1,7 +1,7 @@
 version: "3.8"
 
 services:
-  postgres:
+  grad-db:
     image: postgres:15
     container_name: grad-hub-tracker-db
     environment:
@@ -11,7 +11,7 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - grad-db-data:/var/lib/postgresql/data
     networks:
       - app-network
 
@@ -28,7 +28,7 @@ services:
     env_file:
       - .env
     depends_on:
-      - postgres
+      - grad-db
     tty: true 
     stdin_open: true
 
@@ -52,4 +52,4 @@ networks:
     driver: bridge
 
 volumes:
-  postgres_data:
+  grad-db-data:
