@@ -19,6 +19,7 @@ services:
     build: 
       context: ./grad-hub-tracker-backend
       dockerfile: Dockerfile
+      network: host
     container_name: grad-hub-tracker-backend
     ports:
       - "2053:2053"
@@ -33,6 +34,7 @@ services:
     build:
       context: ./grad-hub-tracker-main
       dockerfile: Dockerfile
+      network: host
     container_name: grad-hub-tracker-frontend
     ports:
       - "2082:2082"
