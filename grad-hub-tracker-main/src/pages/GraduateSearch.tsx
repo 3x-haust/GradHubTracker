@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Search, Filter, Download, Eye, Edit, Trash2, Phone, Mail, MapPin } from "lucide-react"
+import { Search, Filter, Download, Eye, Edit, Trash2, Phone, Mail, MapPin, Briefcase, GraduationCap } from "lucide-react"
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 import { GraduateRecord, DesiredField, StatusOption } from "@/lib/types"
@@ -431,6 +431,26 @@ export default function GraduateSearch() {
                           <MapPin className="h-3 w-3" />
                           {graduate.address}
                         </div>
+                        {graduate.employmentHistory.length > 0 && (
+                          <div className="flex items-center gap-2">
+                            <Briefcase className="h-3 w-3" />
+                            <span>
+                              {graduate.employmentHistory
+                                .map((e) => `${e.company}${e.period ? ` (${e.period})` : ""}`)
+                                .join("; ")}
+                            </span>
+                          </div>
+                        )}
+                        {graduate.educationHistory.length > 0 && (
+                          <div className="flex items-center gap-2">
+                            <GraduationCap className="h-3 w-3" />
+                            <span>
+                              {graduate.educationHistory
+                                .map((e) => `${e.school}${e.period ? ` (${e.period})` : ""}`)
+                                .join("; ")}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -467,16 +487,7 @@ export default function GraduateSearch() {
                         <div className="text-sm">
                           <span className="font-medium">희망분야:</span> {graduate.desiredField.join(", ")}
                         </div>
-                        {graduate.employmentHistory.length > 0 && (
-                          <div className="text-sm text-green-600">
-                            <span className="font-medium">취업:</span> {graduate.employmentHistory[0].company} ({graduate.employmentHistory[0].period})
-                          </div>
-                        )}
-                        {graduate.educationHistory.length > 0 && (
-                          <div className="text-sm text-blue-600">
-                            <span className="font-medium">진학:</span> {graduate.educationHistory[0].school} ({graduate.educationHistory[0].period})
-                          </div>
-                        )}
+                        
                       </div>
                     </div>
                   </div>

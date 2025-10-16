@@ -185,7 +185,7 @@ export default function GraduateRegister() {
                       if (!department) msgs.push(`${colRefByIndex(6)}: 졸업학과 비어있음`)
                       if (!attendance) msgs.push(`${colRefByIndex(8)}: 근태 비어있음`)
                       if (name && !isKoreanName(name)) msgs.push(`${colRefByIndex(1)}: 이름은 한글만 허용`)
-                      if (birthDate && !isValidDate(birthDate)) msgs.push(`${colRefByIndex(3)}: 생년월일 형식 오류(YYYY-MM-DD 또는 YYYY.MM.DD)`) 
+                      if (birthDate && !isValidDate(birthDate)) msgs.push(`${colRefByIndex(3)}: 생년월일 형식 오류(YYYY-MM-DD, YYYY.M.D, YYYY.MM.DD, YYYYMMDD, 또는 엑셀 숫자 날짜)`) 
                       if (phone && !isValidPhone(phone)) msgs.push(`${colRefByIndex(4)}: 연락처 형식 오류(010-1234-5678)`)
                       const gnum = Number(grade)
                       if (grade && (isNaN(gnum) || gnum < 0 || gnum > 100)) msgs.push(`${colRefByIndex(7)}: 성적은 0~100 사이 숫자`)
@@ -515,6 +515,13 @@ function parseCSV(text: string): string[][] {
 function normalizeDateInput(input: string): string {
   const t = (input || '').trim()
   if (!t) return ''
+  const iso = t.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (iso) {
+    const y = iso[1]
+    const mo = iso[2]
+    const d = iso[3]
+    return `${y}-${mo}-${d}`
+  }
   const m = t.match(/^(\d{4})[./-](\d{1,2})[./-](\d{1,2})$/)
   if (m) {
     const y = m[1]
@@ -526,6 +533,26 @@ function normalizeDateInput(input: string): string {
     const y = t.slice(0, 4)
     const mo = t.slice(4, 6)
     const d = t.slice(6, 8)
+    return `${y}-${mo}-${d}`
+  }
+  if (/^\d{5,6}$/.test(t)) {
+    const n = parseInt(t, 10)
+    if (!isNaN(n) && n > 0) {
+      const epoch = Date.UTC(1899, 11, 30)
+      const days = n > 59 ? n - 1 : n
+      const ms = epoch + days * 86400000
+      const dt = new Date(ms)
+      const y = dt.getUTCFullYear()
+      const mo = String(dt.getUTCMonth() + 1).padStart(2, '0')
+      const d = String(dt.getUTCDate()).padStart(2, '0')
+      return `${y}-${mo}-${d}`
+    }
+  }
+  const dt = new Date(t)
+  if (!isNaN(dt.getTime())) {
+    const y = dt.getFullYear()
+    const mo = String(dt.getMonth() + 1).padStart(2, '0')
+    const d = String(dt.getDate()).padStart(2, '0')
     return `${y}-${mo}-${d}`
   }
   return ''
