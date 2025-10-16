@@ -45,7 +45,6 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     t.clear();
   }
   if (!res.ok) {
-    console.log(res);
     let err: ApiError = { statusCode: res.status, message: res.statusText };
     try {
       err = (await res.json()) as ApiError;
