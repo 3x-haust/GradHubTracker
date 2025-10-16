@@ -77,6 +77,22 @@ export class GraduatesService {
       qb.where('g.name ILIKE :q OR g.phone ILIKE :q OR g.email ILIKE :q', {
         q: `%${params.q}%`,
       });
+      // employmentHistory.company contains q
+      qb.orWhere(
+        `EXISTS (
+          SELECT 1 FROM jsonb_array_elements(g.employmentHistory) e
+          WHERE e->>'company' ILIKE :q
+        )`,
+        { q: `%${params.q}%` },
+      );
+      // educationHistory.school contains q
+      qb.orWhere(
+        `EXISTS (
+          SELECT 1 FROM jsonb_array_elements(g.educationHistory) e
+          WHERE e->>'school' ILIKE :q
+        )`,
+        { q: `%${params.q}%` },
+      );
     }
     qb.orderBy('g.updatedAt', 'DESC');
     qb.take(take).skip(skip);

@@ -28,6 +28,8 @@ export default function GraduateSearch() {
   const me = useAuth((s) => s.me)
   const [searchFilters, setSearchFilters] = useState({
     name: "",
+    employment: "",
+    school: "",
     graduationYear: "",
     gender: "",
     department: "",
@@ -84,9 +86,17 @@ export default function GraduateSearch() {
       const matchCert = searchFilters.certificate
         ? g.certificates.some((c) => c.includes(searchFilters.certificate))
         : true
+      const empMatch = searchFilters.employment
+        ? (g.employmentHistory || []).some(e => e.company?.includes(searchFilters.employment))
+        : true
+      const eduMatch = searchFilters.school
+        ? (g.educationHistory || []).some(e => e.school?.includes(searchFilters.school))
+        : true
       const employmentDurationMatch = true
       return (
         (!searchFilters.name || g.name.includes(searchFilters.name)) &&
+        empMatch &&
+        eduMatch &&
         (!searchFilters.phone || g.phone.includes(searchFilters.phone)) &&
         (!searchFilters.email || g.email.includes(searchFilters.email)) &&
         (!searchFilters.address || g.address.includes(searchFilters.address)) &&
@@ -220,6 +230,22 @@ export default function GraduateSearch() {
                 placeholder="이름을 입력하세요"
                 value={searchFilters.name}
                 onChange={(e) => setSearchFilters({...searchFilters, name: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">취업처</label>
+              <Input
+                placeholder="회사명 포함 검색"
+                value={searchFilters.employment}
+                onChange={(e) => setSearchFilters({...searchFilters, employment: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">대학</label>
+              <Input
+                placeholder="대학명 포함 검색"
+                value={searchFilters.school}
+                onChange={(e) => setSearchFilters({...searchFilters, school: e.target.value})}
               />
             </div>
             <div>
@@ -365,6 +391,8 @@ export default function GraduateSearch() {
             <Button variant="outline" onClick={() => {
               setSearchFilters({
                 name: "",
+                employment: "",
+                school: "",
                 graduationYear: "",
                 gender: "",
                 department: "",

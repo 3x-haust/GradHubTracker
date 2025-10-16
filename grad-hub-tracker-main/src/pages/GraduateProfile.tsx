@@ -124,11 +124,6 @@ export default function GraduateProfile() {
                   <div className="whitespace-pre-wrap text-muted-foreground">{record.memo}</div>
                 </div>
               )}
-              <div className="mt-6 text-xs text-muted-foreground">
-                <div>ID: {record.id}</div>
-                <div>생성: {new Date(record.createdAt).toLocaleString()}</div>
-                <div>수정: {new Date(record.updatedAt).toLocaleString()}</div>
-              </div>
             </div>
           </div>
         </CardContent>
