@@ -20,6 +20,20 @@ export class GraduatesService {
     private logs: ActivityLogsService,
   ) {}
 
+  private extractPgError(e: unknown): { code?: string; constraint?: string } {
+    const err = e as
+      | undefined
+      | null
+      | {
+          code?: string;
+          constraint?: string;
+          driverError?: { code?: string; constraint?: string };
+        };
+    const code = err?.code ?? err?.driverError?.code;
+    const constraint = err?.constraint ?? err?.driverError?.constraint;
+    return { code, constraint };
+  }
+
   async create(dto: CreateGraduateDto, actorUserId?: string | null) {
     const entity = this.repo.create({
       ...dto,
@@ -35,8 +49,22 @@ export class GraduatesService {
         message: `${saved.name} 졸업생을 등록했습니다`,
       });
       return saved;
-    } catch {
-      throw new ConflictException('중복 데이터');
+    } catch (e) {
+      const { code, constraint } = this.extractPgError(e);
+      if (code === '23505') {
+        if (constraint && String(constraint).includes('email')) {
+          throw new ConflictException({
+            statusCode: 409,
+            message: '중복 데이터',
+            errors: [{ field: 'email', message: '이미 등록된 이메일입니다' }],
+          });
+        }
+        throw new ConflictException({
+          statusCode: 409,
+          message: '중복 데이터',
+        });
+      }
+      throw e;
     }
   }
 
@@ -90,7 +118,26 @@ export class GraduatesService {
   ) {
     const g = await this.findOne(id);
     Object.assign(g, dto);
-    const saved = await this.repo.save(g);
+    let saved: Graduate;
+    try {
+      saved = await this.repo.save(g);
+    } catch (e) {
+      const { code, constraint } = this.extractPgError(e);
+      if (code === '23505') {
+        if (constraint && String(constraint).includes('email')) {
+          throw new ConflictException({
+            statusCode: 409,
+            message: '중복 데이터',
+            errors: [{ field: 'email', message: '이미 등록된 이메일입니다' }],
+          });
+        }
+        throw new ConflictException({
+          statusCode: 409,
+          message: '중복 데이터',
+        });
+      }
+      throw e;
+    }
     await this.logs.log({
       type: 'update',
       actorUserId: actorUserId ?? null,
@@ -102,14 +149,12 @@ export class GraduatesService {
 
   async remove(id: string, actorUserId?: string | null) {
     const g = await this.findOne(id);
-    // Log first while the graduate row still exists; FK will be set null after deletion (onDelete: SET NULL)
     await this.logs.log({
       type: 'delete',
       actorUserId: actorUserId ?? null,
       graduateId: id,
       message: `${g.name} 졸업생을 삭제했습니다`,
     });
-    // Remove local photo file if present
     if (g.photoUrl) {
       const uploadDir = process.env.UPLOAD_DIR ?? './uploads';
       const path = join(
@@ -128,7 +173,6 @@ export class GraduatesService {
 
   async setPhoto(id: string, url: string, actorUserId?: string | null) {
     const g = await this.findOne(id);
-    // Delete previous photo file if exists
     if (g.photoUrl) {
       const uploadDir = process.env.UPLOAD_DIR ?? './uploads';
       const path = join(

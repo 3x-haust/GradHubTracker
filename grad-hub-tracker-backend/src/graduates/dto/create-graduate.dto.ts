@@ -11,6 +11,8 @@ import {
   Min,
   Matches,
   ArrayUnique,
+  ArrayNotEmpty,
+  IsNotEmpty,
 } from 'class-validator';
 import {
   DepartmentEnum,
@@ -21,28 +23,34 @@ import {
 export class CreateGraduateDto {
   @IsString()
   @Matches(/^[가-힣]+$/)
+  @IsNotEmpty()
   name!: string;
 
   @IsIn(['남', '여'])
+  @IsNotEmpty()
   gender!: '남' | '여';
 
   @IsDateString()
+  @IsNotEmpty()
   birthDate!: string;
 
   @IsString()
   @Matches(/^010-\d{4}-\d{4}$/, {
     message: '전화번호 형식은 010-1234-5678 이어야 합니다.',
   })
+  @IsNotEmpty()
   phone!: string;
 
-  @IsOptional()
   @IsEmail()
-  email?: string | null;
+  @IsNotEmpty()
+  email!: string;
 
   @IsString()
+  @IsNotEmpty()
   address!: string;
 
   @IsEnum(DepartmentEnum)
+  @IsNotEmpty()
   department!: DepartmentEnum;
 
   @IsInt()
@@ -51,6 +59,7 @@ export class CreateGraduateDto {
   grade!: number;
 
   @IsIn(['상', '중', '하'])
+  @IsNotEmpty()
   attendance!: '상' | '중' | '하';
 
   @IsArray()
@@ -60,10 +69,13 @@ export class CreateGraduateDto {
 
   @IsArray()
   @IsEnum(DesiredFieldEnum, { each: true })
+  @ArrayUnique()
+  @ArrayNotEmpty()
   desiredField!: DesiredFieldEnum[];
 
   @IsArray()
   @IsEnum(StatusEnum, { each: true })
+  @ArrayNotEmpty()
   currentStatus!: StatusEnum[];
 
   @IsInt()

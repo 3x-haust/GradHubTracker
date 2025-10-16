@@ -70,7 +70,13 @@ export default function GraduateProfile() {
                 <Badge variant="outline">{record.department}</Badge>
               </div>
               <div className="text-sm text-muted-foreground mt-2">
-                {record.phone} · {record.email} · {record.address}
+                성별: {record.gender} · 생일: {record.birthDate}
+              </div>
+              <div className="text-sm text-muted-foreground mt-1">
+                연락처: {record.phone} · 이메일: {record.email}
+              </div>
+              <div className="text-sm text-muted-foreground mt-1">
+                주소: {record.address}
               </div>
               <div className="mt-4 text-sm">
                 성적: {record.grade}% · 근태: {record.attendance}
@@ -80,6 +86,48 @@ export default function GraduateProfile() {
               </div>
               <div className="mt-2 text-sm">
                 상태: {record.currentStatus.join(", ")}
+              </div>
+              {record.certificates && record.certificates.length > 0 && (
+                <div className="mt-2 text-sm">
+                  자격증: {record.certificates.join(', ')}
+                </div>
+              )}
+              {record.employmentHistory && record.employmentHistory.length > 0 && (
+                <div className="mt-4">
+                  <div className="text-sm font-medium mb-1">취업 이력</div>
+                  <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                    {record.employmentHistory.map((e, idx) => (
+                      <li key={`emp-${idx}`}>
+                        <span className="font-medium text-foreground">{e.company}</span>
+                        <span className="ml-2">{e.period}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {record.educationHistory && record.educationHistory.length > 0 && (
+                <div className="mt-4">
+                  <div className="text-sm font-medium mb-1">학력 이력</div>
+                  <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                    {record.educationHistory.map((e, idx) => (
+                      <li key={`edu-${idx}`}>
+                        <span className="font-medium text-foreground">{e.school}</span>
+                        <span className="ml-2">{e.period}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {record.memo && (
+                <div className="mt-4 text-sm">
+                  <div className="font-medium mb-1">메모</div>
+                  <div className="whitespace-pre-wrap text-muted-foreground">{record.memo}</div>
+                </div>
+              )}
+              <div className="mt-6 text-xs text-muted-foreground">
+                <div>ID: {record.id}</div>
+                <div>생성: {new Date(record.createdAt).toLocaleString()}</div>
+                <div>수정: {new Date(record.updatedAt).toLocaleString()}</div>
               </div>
             </div>
           </div>

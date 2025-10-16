@@ -173,6 +173,16 @@ export default function GraduateRegister() {
                       return typeof idx === 'number' ? colRefByIndex(idx) : field
                     }
 
+                    const isValidPeriod = (s: string) => {
+                      const t = (s || '').trim()
+                      if (!t) return false
+                      const u = t.replace(/[–—−]/g, '-')
+                      const datePart = String.raw`\d{4}(?:[./-]\d{1,2}(?:[./-]\d{1,2})?)?`
+                      const start = new RegExp(`^${datePart}$`)
+                      const range = new RegExp(`^${datePart}\\s*-\\s*(${datePart})?$`)
+                      return start.test(u) || range.test(u)
+                    }
+
                     const validateRow = (r: string[]) => {
                       const msgs: string[] = []
                       const [graduationYear, name, gender, birthDate, phone, address, department, grade, attendance, certificates, email, employment, education, desired, status] = r
@@ -184,6 +194,9 @@ export default function GraduateRegister() {
                       if (!address) msgs.push(`${colRefByIndex(5)}: 주소 비어있음`)
                       if (!department) msgs.push(`${colRefByIndex(6)}: 졸업학과 비어있음`)
                       if (!attendance) msgs.push(`${colRefByIndex(8)}: 근태 비어있음`)
+                      if (!email) msgs.push(`${colRefByIndex(10)}: 이메일 비어있음`)
+                      if (!desired) msgs.push(`${colRefByIndex(13)}: 희망분야 비어있음 (최소 1개)`) 
+                      if (!status) msgs.push(`${colRefByIndex(14)}: 현재상태 비어있음 (최소 1개)`)
                       if (name && !isKoreanName(name)) msgs.push(`${colRefByIndex(1)}: 이름은 한글만 허용`)
                       if (birthDate && !isValidDate(birthDate)) msgs.push(`${colRefByIndex(3)}: 생년월일 형식 오류(YYYY-MM-DD, YYYY.M.D, YYYY.MM.DD, YYYYMMDD, 또는 엑셀 숫자 날짜)`) 
                       if (phone && !isValidPhone(phone)) msgs.push(`${colRefByIndex(4)}: 연락처 형식 오류(010-1234-5678)`)
@@ -198,19 +211,37 @@ export default function GraduateRegister() {
                         .map(s => s.trim())
                         .filter(Boolean)
                         .filter(s => !desiredAllow.includes(s as DesiredField))
+                      if ((desired || '').split(',').map(s=>s.trim()).filter(Boolean).length === 0) {
+                        msgs.push(`${colRefByIndex(13)}: 희망분야 최소 1개 선택 필요`)
+                      }
                       if (invalidDesired.length > 0) msgs.push(`${colRefByIndex(13)}: 희망분야 허용값 아님(${invalidDesired.join(', ')})`)
                       const invalidStatus = (status || '')
                         .split(',')
                         .map(s => s.trim())
                         .filter(Boolean)
                         .filter(s => !statusAllow.includes(s as StatusOption))
+                      if ((status || '').split(',').map(s=>s.trim()).filter(Boolean).length === 0) {
+                        msgs.push(`${colRefByIndex(14)}: 현재상태 최소 1개 선택 필요`)
+                      }
                       if (invalidStatus.length > 0) msgs.push(`${colRefByIndex(14)}: 현재상태 허용값 아님(${invalidStatus.join(', ')})`)
                       const empPairs = (employment || '').split(';').map(s => s.trim()).filter(Boolean)
-                      const badEmp = empPairs.filter(p => !p.includes(':') || p.split(':')[0].trim() === '' || p.split(':')[1].trim() === '')
-                      if (badEmp.length > 0) msgs.push(`${colRefByIndex(11)}: 취업처/기간 형식 오류(회사:기간; 세미콜론 구분)`)
+                      const badEmp = empPairs.filter(p => {
+                        if (!p.includes(':')) return true
+                        const [company, period] = p.split(':')
+                        const companyOk = (company || '').trim().length > 0
+                        const periodOk = isValidPeriod((period || '').trim())
+                        return !(companyOk && periodOk)
+                      })
+                      if (badEmp.length > 0) msgs.push(`${colRefByIndex(11)}: 취업처/기간 형식 오류(회사:기간; 세미콜론 구분, 기간 예: 2025.01 - 2025.12 또는 2025.01.01 - )`)
                       const eduPairs = (education || '').split(';').map(s => s.trim()).filter(Boolean)
-                      const badEdu = eduPairs.filter(p => !p.includes(':') || p.split(':')[0].trim() === '' || p.split(':')[1].trim() === '')
-                      if (badEdu.length > 0) msgs.push(`${colRefByIndex(12)}: 대학명/기간 형식 오류(대학:기간; 세미콜론 구분)`)
+                      const badEdu = eduPairs.filter(p => {
+                        if (!p.includes(':')) return true
+                        const [school, period] = p.split(':')
+                        const schoolOk = (school || '').trim().length > 0
+                        const periodOk = isValidPeriod((period || '').trim())
+                        return !(schoolOk && periodOk)
+                      })
+                      if (badEdu.length > 0) msgs.push(`${colRefByIndex(12)}: 대학명/기간 형식 오류(대학:기간; 세미콜론 구분, 기간 예: 2025.03 - 또는 2025.03.01 - 2028.02.28)`)
                       return msgs
                     }
 
@@ -228,11 +259,20 @@ export default function GraduateRegister() {
                         await useGraduates.getState().create(rec as unknown as Omit<GraduateRecord, 'id' | 'createdAt' | 'updatedAt'>)
                         success++
                       } catch (err: unknown) {
-                        let msg = err instanceof Error ? err.message : String(err)
+                        let msg = err instanceof Error ? err.message : ''
                         const apiErr = err as ApiError
                         if (apiErr && Array.isArray(apiErr.errors) && apiErr.errors.length > 0) {
                           const detail = apiErr.errors.map(e => `${colRefByField(e.field)}: ${e.message}`).join('; ')
                           msg = `서버 검증 실패 - ${detail}`
+                        } else if (apiErr && apiErr.message) {
+                          msg = apiErr.message
+                        }
+                        if (!msg) {
+                          try {
+                            msg = JSON.stringify(err)
+                          } catch {
+                            msg = String(err)
+                          }
                         }
                         failed++
                         errors.push(`${i + 2}행 처리 실패: ${msg || "알 수 없는 오류"}`)
@@ -511,7 +551,6 @@ function parseCSV(text: string): string[][] {
   return rows
 }
 
-// Normalize date strings like 'YYYY-MM-DD', 'YYYY.MM.DD', 'YYYY/MM/DD', 'YYYY-M-D', or 'YYYYMMDD' to 'YYYY-MM-DD'
 function normalizeDateInput(input: string): string {
   const t = (input || '').trim()
   if (!t) return ''
@@ -671,7 +710,7 @@ function mapRowToGraduate(r: string[]): GraduateRecord {
     grade: Number(grade) || 0,
     attendance: attendanceAllow.includes(attendance as AttendanceLevel) ? (attendance as AttendanceLevel) : "중",
     certificates: certList,
-    email: email || "",
+  email: email || "",
     employmentHistory: parseEmploymentPairs(employment),
     educationHistory: parseEducationPairs(education),
     desiredField: desiredList,
