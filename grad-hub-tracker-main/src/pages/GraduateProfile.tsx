@@ -49,8 +49,6 @@ export default function GraduateProfile() {
     );
   }
 
-  console.log(record);
-
   return (
     <div className="space-y-6">
       <Card className="bg-gradient-card shadow-card">
@@ -100,7 +98,7 @@ export default function GraduateProfile() {
                   <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
                     {record.employmentHistory.map((e, idx) => (
                       <li key={`emp-${idx}`}>
-                        <span className="font-medium text-foreground">{e.company}</span>
+                        <span className="font-medium text-foreground">{e.company}: </span>
                         <span className="ml-2">{e.period}</span>
                       </li>
                     ))}
@@ -113,7 +111,7 @@ export default function GraduateProfile() {
                   <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
                     {record.educationHistory.map((e, idx) => (
                       <li key={`edu-${idx}`}>
-                        <span className="font-medium text-foreground">{e.school}</span>
+                        <span className="font-medium text-foreground">{e.school}: </span>
                         <span className="ml-2">{e.period}</span>
                       </li>
                     ))}
