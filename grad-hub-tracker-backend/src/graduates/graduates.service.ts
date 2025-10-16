@@ -38,6 +38,8 @@ export class GraduatesService {
     const entity = this.repo.create({
       ...dto,
       email: dto.email ?? null,
+      grade: typeof dto.grade === 'number' ? dto.grade : null,
+      attendance: dto.attendance ?? null,
       memo: dto.memo ?? null,
     });
     try {

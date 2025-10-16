@@ -55,14 +55,15 @@ export class CreateGraduateDto {
   @IsNotEmpty()
   department!: DepartmentEnum;
 
+  @IsOptional()
   @IsInt()
   @Min(0)
   @Max(100)
-  grade!: number;
+  grade?: number;
 
+  @IsOptional()
   @IsIn(['상', '중', '하'])
-  @IsNotEmpty()
-  attendance!: '상' | '중' | '하';
+  attendance?: '상' | '중' | '하';
 
   @IsArray()
   @ArrayUnique()

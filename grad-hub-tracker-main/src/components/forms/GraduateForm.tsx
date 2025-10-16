@@ -32,8 +32,8 @@ const graduateSchema = z.object({
     .regex(/^010-\d{4}-\d{4}$/, "전화번호 형식은 010-1234-5678 이어야 합니다"),
   address: z.string().min(1, "주소를 입력해주세요"),
   department: z.string().min(1, "졸업학과를 선택해주세요"),
-  grade: z.number().min(0).max(100, "성적은 0-100% 사이여야 합니다"),
-  attendance: z.string().min(1, "근태를 선택해주세요"),
+  grade: z.preprocess((v) => (v === '' || v == null ? undefined : Number(v)), z.number().min(0).max(100, "성적은 0-100% 사이여야 합니다").optional()),
+  attendance: z.string().optional(),
   certificates: z.array(z.string()).default([]),
   email: z.string().email("올바른 이메일 형식이 아닙니다"),
   employmentHistory: z.array(z.object({
@@ -70,7 +70,8 @@ export default function GraduateForm({ onBack }: GraduateFormProps) {
       educationHistory: [],
       desiredField: [],
       currentStatus: [],
-      grade: 0
+      grade: undefined,
+      attendance: undefined,
     }
   })
 
@@ -79,12 +80,12 @@ export default function GraduateForm({ onBack }: GraduateFormProps) {
       graduationYear: parseInt(data.graduationYear, 10),
       name: data.name,
       gender: data.gender as GraduateRecord["gender"],
-  birthDate: data.birthDate.toISOString().split('T')[0],
+      birthDate: data.birthDate.toISOString().split('T')[0],
       phone: data.phone,
       address: data.address,
       department: data.department,
-      grade: data.grade,
-      attendance: data.attendance as GraduateRecord["attendance"],
+      grade: typeof data.grade === 'number' ? data.grade : 0,
+      attendance: (data.attendance as GraduateRecord["attendance"]) ?? '중',
       certificates: data.certificates ?? [],
       email: data.email,
       employmentHistory: (data.employmentHistory ?? []).map((item) => ({
@@ -362,7 +363,7 @@ export default function GraduateForm({ onBack }: GraduateFormProps) {
                   name="attendance"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>근태 *</FormLabel>
+                      <FormLabel>근태</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>

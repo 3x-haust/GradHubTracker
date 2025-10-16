@@ -50,11 +50,11 @@ export class Graduate {
   @Column({ type: 'enum', enum: DepartmentEnum })
   department!: DepartmentEnum;
 
-  @Column({ type: 'int' })
-  grade!: number;
+  @Column({ type: 'int', nullable: true })
+  grade!: number | null;
 
-  @Column({ type: 'varchar', length: 1 })
-  attendance!: '상' | '중' | '하';
+  @Column({ type: 'varchar', length: 1, nullable: true })
+  attendance!: '상' | '중' | '하' | null;
 
   @Column({ type: 'text', array: true, default: '{}' })
   certificates!: string[];

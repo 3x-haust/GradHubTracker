@@ -193,7 +193,6 @@ export default function GraduateRegister() {
                       if (!phone) msgs.push(`${colRefByIndex(4)}: 연락처 비어있음`)
                       if (!address) msgs.push(`${colRefByIndex(5)}: 주소 비어있음`)
                       if (!department) msgs.push(`${colRefByIndex(6)}: 졸업학과 비어있음`)
-                      if (!attendance) msgs.push(`${colRefByIndex(8)}: 근태 비어있음`)
                       if (!email) msgs.push(`${colRefByIndex(10)}: 이메일 비어있음`)
                       if (!desired) msgs.push(`${colRefByIndex(13)}: 희망분야 비어있음 (최소 1개)`) 
                       if (!status) msgs.push(`${colRefByIndex(14)}: 현재상태 비어있음 (최소 1개)`)
