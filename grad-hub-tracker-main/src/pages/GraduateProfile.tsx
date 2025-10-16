@@ -49,6 +49,8 @@ export default function GraduateProfile() {
     );
   }
 
+  console.log(record);
+
   return (
     <div className="space-y-6">
       <Card className="bg-gradient-card shadow-card">

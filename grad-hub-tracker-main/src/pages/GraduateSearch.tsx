@@ -530,8 +530,14 @@ export default function GraduateSearch() {
                     <Button size="sm" variant="outline" onClick={async () => {
                       try {
                         await grads.remove(graduate.id)
-                        await grads.fetch({ page: currentPage })
-                        setFilteredGraduates(grads.items)
+                        setFilteredGraduates((prev) => {
+                          const updated = prev.filter((g) => g.id !== graduate.id)
+                          const newTotalPages = Math.max(1, Math.ceil(updated.length / itemsPerPage))
+                          if (currentPage > newTotalPages) {
+                            setCurrentPage(newTotalPages)
+                          }
+                          return updated
+                        })
                       } catch (e) {
                         setError("삭제에 실패했습니다. 다시 시도해주세요.")
                       }
