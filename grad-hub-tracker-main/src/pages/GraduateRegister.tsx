@@ -176,10 +176,10 @@ export default function GraduateRegister() {
                     const isValidPeriod = (s: string) => {
                       const t = (s || '').trim()
                       if (!t) return false
-                      const u = t.replace(/[–—−]/g, '-')
+                      const u = t.replace(/[–—−~]/g, '-')
                       const datePart = String.raw`\d{4}(?:[./-]\d{1,2}(?:[./-]\d{1,2})?)?`
                       const start = new RegExp(`^${datePart}$`)
-                      const range = new RegExp(`^${datePart}\\s*-\\s*(${datePart})?$`)
+                      const range = new RegExp(`^${datePart}\\s*[-]\\s*(${datePart})?$`)
                       return start.test(u) || range.test(u)
                     }
 
@@ -226,8 +226,8 @@ export default function GraduateRegister() {
                       if (invalidStatus.length > 0) msgs.push(`${colRefByIndex(14)}: 현재상태 허용값 아님(${invalidStatus.join(', ')})`)
                       const empPairs = (employment || '').split(';').map(s => s.trim()).filter(Boolean)
                       const badEmp = empPairs.filter(p => {
-                        if (!p.includes(':')) return true
-                        const [company, period] = p.split(':')
+                        if (!p.includes(':') && !p.includes('：')) return true
+                        const [company, period] = p.split(/:|：/)
                         const companyOk = (company || '').trim().length > 0
                         const periodOk = isValidPeriod((period || '').trim())
                         return !(companyOk && periodOk)
@@ -235,8 +235,8 @@ export default function GraduateRegister() {
                       if (badEmp.length > 0) msgs.push(`${colRefByIndex(11)}: 취업처/기간 형식 오류(회사:기간; 세미콜론 구분, 기간 예: 2025.01 - 2025.12 또는 2025.01.01 - )`)
                       const eduPairs = (education || '').split(';').map(s => s.trim()).filter(Boolean)
                       const badEdu = eduPairs.filter(p => {
-                        if (!p.includes(':')) return true
-                        const [school, period] = p.split(':')
+                        if (!p.includes(':') && !p.includes('：')) return true
+                        const [school, period] = p.split(/:|：/)
                         const schoolOk = (school || '').trim().length > 0
                         const periodOk = isValidPeriod((period || '').trim())
                         return !(schoolOk && periodOk)
