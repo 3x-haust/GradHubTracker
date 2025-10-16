@@ -133,7 +133,7 @@ export default function GraduateRegister() {
                   if (header[0] !== expectedFirst) {
                     errors.push("템플릿 형식이 올바르지 않습니다. 템플릿을 다시 다운로드 해주세요.")
                   } else {
-                    const isValidDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(Date.parse(s))
+                    const isValidDate = (s: string) => normalizeDateInput(s) !== ''
                     const isValidPhone = (s: string) => /^010-\d{4}-\d{4}$/.test(s)
                     const isKoreanName = (s: string) => /^[가-힣]+$/.test(s)
                     const isValidEmail = (s: string) => /^(?:[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})$/i.test(s)
@@ -185,7 +185,7 @@ export default function GraduateRegister() {
                       if (!department) msgs.push(`${colRefByIndex(6)}: 졸업학과 비어있음`)
                       if (!attendance) msgs.push(`${colRefByIndex(8)}: 근태 비어있음`)
                       if (name && !isKoreanName(name)) msgs.push(`${colRefByIndex(1)}: 이름은 한글만 허용`)
-                      if (birthDate && !isValidDate(birthDate)) msgs.push(`${colRefByIndex(3)}: 생년월일 형식 오류(YYYY-MM-DD)`)
+                      if (birthDate && !isValidDate(birthDate)) msgs.push(`${colRefByIndex(3)}: 생년월일 형식 오류(YYYY-MM-DD 또는 YYYY.MM.DD)`) 
                       if (phone && !isValidPhone(phone)) msgs.push(`${colRefByIndex(4)}: 연락처 형식 오류(010-1234-5678)`)
                       const gnum = Number(grade)
                       if (grade && (isNaN(gnum) || gnum < 0 || gnum > 100)) msgs.push(`${colRefByIndex(7)}: 성적은 0~100 사이 숫자`)
@@ -511,6 +511,26 @@ function parseCSV(text: string): string[][] {
   return rows
 }
 
+// Normalize date strings like 'YYYY-MM-DD', 'YYYY.MM.DD', 'YYYY/MM/DD', 'YYYY-M-D', or 'YYYYMMDD' to 'YYYY-MM-DD'
+function normalizeDateInput(input: string): string {
+  const t = (input || '').trim()
+  if (!t) return ''
+  const m = t.match(/^(\d{4})[./-](\d{1,2})[./-](\d{1,2})$/)
+  if (m) {
+    const y = m[1]
+    const mo = m[2].padStart(2, '0')
+    const d = m[3].padStart(2, '0')
+    return `${y}-${mo}-${d}`
+  }
+  if (/^\d{8}$/.test(t)) {
+    const y = t.slice(0, 4)
+    const mo = t.slice(4, 6)
+    const d = t.slice(6, 8)
+    return `${y}-${mo}-${d}`
+  }
+  return ''
+}
+
 async function downloadXlsxTemplate() {
   const wb = new ExcelJS.Workbook()
   const ws = wb.addWorksheet('졸업생등록')
@@ -617,7 +637,7 @@ function mapRowToGraduate(r: string[]): GraduateRecord {
     graduationYear: Number(graduationYear) || new Date().getFullYear(),
     name: name || "",
     gender: genderAllow.includes(gender as Gender) ? (gender as Gender) : "남",
-    birthDate: birthDate || "",
+  birthDate: normalizeDateInput(birthDate) || "",
     phone: phone || "",
     address: address || "",
     department: department || "",
