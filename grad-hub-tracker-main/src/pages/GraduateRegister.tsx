@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { apiForm } from "@/lib/api"
+import { apiForm, ApiError } from "@/lib/api"
 import { Badge } from "@/components/ui/badge"
 
 export default function GraduateRegister() {
@@ -133,15 +133,107 @@ export default function GraduateRegister() {
                   if (header[0] !== expectedFirst) {
                     errors.push("템플릿 형식이 올바르지 않습니다. 템플릿을 다시 다운로드 해주세요.")
                   } else {
+                    const isValidDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(Date.parse(s))
+                    const isValidPhone = (s: string) => /^010-\d{4}-\d{4}$/.test(s)
+                    const isKoreanName = (s: string) => /^[가-힣]+$/.test(s)
+                    const isValidEmail = (s: string) => /^(?:[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})$/i.test(s)
+
+                    const colLetter = (idx: number) => {
+                      const n = idx
+                      let s = ''
+                      let x = n
+                      while (true) {
+                        s = String.fromCharCode(65 + (x % 26)) + s
+                        x = Math.floor(x / 26) - 1
+                        if (x < 0) break
+                      }
+                      return s
+                    }
+                    const colRefByIndex = (idx: number) => `열 ${colLetter(idx)}${header[idx] ? `(${header[idx]})` : ''}`
+                    const fieldToIndex: Record<string, number> = {
+                      graduationYear: 0,
+                      name: 1,
+                      gender: 2,
+                      birthDate: 3,
+                      phone: 4,
+                      address: 5,
+                      department: 6,
+                      grade: 7,
+                      attendance: 8,
+                      certificates: 9,
+                      email: 10,
+                      employmentHistory: 11,
+                      educationHistory: 12,
+                      desiredField: 13,
+                      currentStatus: 14,
+                      memo: 15,
+                    }
+                    const colRefByField = (field: string) => {
+                      const idx = fieldToIndex[field]
+                      return typeof idx === 'number' ? colRefByIndex(idx) : field
+                    }
+
+                    const validateRow = (r: string[]) => {
+                      const msgs: string[] = []
+                      const [graduationYear, name, gender, birthDate, phone, address, department, grade, attendance, certificates, email, employment, education, desired, status] = r
+                      if (!graduationYear) msgs.push(`${colRefByIndex(0)}: 졸업연도 비어있음`)
+                      if (!name) msgs.push(`${colRefByIndex(1)}: 이름 비어있음`)
+                      if (!gender) msgs.push(`${colRefByIndex(2)}: 성별 비어있음`)
+                      if (!birthDate) msgs.push(`${colRefByIndex(3)}: 생년월일 비어있음`)
+                      if (!phone) msgs.push(`${colRefByIndex(4)}: 연락처 비어있음`)
+                      if (!address) msgs.push(`${colRefByIndex(5)}: 주소 비어있음`)
+                      if (!department) msgs.push(`${colRefByIndex(6)}: 졸업학과 비어있음`)
+                      if (!attendance) msgs.push(`${colRefByIndex(8)}: 근태 비어있음`)
+                      if (name && !isKoreanName(name)) msgs.push(`${colRefByIndex(1)}: 이름은 한글만 허용`)
+                      if (birthDate && !isValidDate(birthDate)) msgs.push(`${colRefByIndex(3)}: 생년월일 형식 오류(YYYY-MM-DD)`)
+                      if (phone && !isValidPhone(phone)) msgs.push(`${colRefByIndex(4)}: 연락처 형식 오류(010-1234-5678)`)
+                      const gnum = Number(grade)
+                      if (grade && (isNaN(gnum) || gnum < 0 || gnum > 100)) msgs.push(`${colRefByIndex(7)}: 성적은 0~100 사이 숫자`)
+                      if (email && !isValidEmail(email)) msgs.push(`${colRefByIndex(10)}: 이메일 형식 오류`)
+                      if (gender && !genderAllow.includes(gender as Gender)) msgs.push(`${colRefByIndex(2)}: 성별 허용값 아님(${gender})`)
+                      if (attendance && !attendanceAllow.includes(attendance as AttendanceLevel)) msgs.push(`${colRefByIndex(8)}: 근태 허용값 아님(${attendance})`)
+                      if (department && !departments.includes(department)) msgs.push(`${colRefByIndex(6)}: 졸업학과 목록에 없음(${department})`)
+                      const invalidDesired = (desired || '')
+                        .split(',')
+                        .map(s => s.trim())
+                        .filter(Boolean)
+                        .filter(s => !desiredAllow.includes(s as DesiredField))
+                      if (invalidDesired.length > 0) msgs.push(`${colRefByIndex(13)}: 희망분야 허용값 아님(${invalidDesired.join(', ')})`)
+                      const invalidStatus = (status || '')
+                        .split(',')
+                        .map(s => s.trim())
+                        .filter(Boolean)
+                        .filter(s => !statusAllow.includes(s as StatusOption))
+                      if (invalidStatus.length > 0) msgs.push(`${colRefByIndex(14)}: 현재상태 허용값 아님(${invalidStatus.join(', ')})`)
+                      const empPairs = (employment || '').split(';').map(s => s.trim()).filter(Boolean)
+                      const badEmp = empPairs.filter(p => !p.includes(':') || p.split(':')[0].trim() === '' || p.split(':')[1].trim() === '')
+                      if (badEmp.length > 0) msgs.push(`${colRefByIndex(11)}: 취업처/기간 형식 오류(회사:기간; 세미콜론 구분)`)
+                      const eduPairs = (education || '').split(';').map(s => s.trim()).filter(Boolean)
+                      const badEdu = eduPairs.filter(p => !p.includes(':') || p.split(':')[0].trim() === '' || p.split(':')[1].trim() === '')
+                      if (badEdu.length > 0) msgs.push(`${colRefByIndex(12)}: 대학명/기간 형식 오류(대학:기간; 세미콜론 구분)`)
+                      return msgs
+                    }
+
                     for (let i = 0; i < rows.length; i++) {
                       const r = rows[i]
                       if (r.length === 0 || r.every((c) => c.trim() === "")) continue
                       try {
+                        const clientErrors = validateRow(r)
+                        if (clientErrors.length > 0) {
+                          failed++
+                          errors.push(`${i + 2}행 유효성 오류: ${clientErrors.join('; ')}`)
+                          continue
+                        }
                         const rec = mapRowToGraduate(r)
                         await useGraduates.getState().create(rec as unknown as Omit<GraduateRecord, 'id' | 'createdAt' | 'updatedAt'>)
                         success++
                       } catch (err: unknown) {
-                        const msg = err instanceof Error ? err.message : String(err)
+                        let msg = err instanceof Error ? err.message : String(err)
+                        const apiErr = err as ApiError
+                        if (apiErr && Array.isArray(apiErr.errors) && apiErr.errors.length > 0) {
+                          const detail = apiErr.errors.map(e => `${colRefByField(e.field)}: ${e.message}`).join('; ')
+                          msg = `서버 검증 실패 - ${detail}`
+                        }
                         failed++
                         errors.push(`${i + 2}행 처리 실패: ${msg || "알 수 없는 오류"}`)
                       }
