@@ -40,6 +40,9 @@ export class GraduatesService {
       email: dto.email ?? null,
       grade: typeof dto.grade === 'number' ? dto.grade : null,
       attendance: dto.attendance ?? null,
+      address: dto.address ?? '',
+      desiredField: dto.desiredField ?? [],
+      currentStatus: dto.currentStatus ?? [],
       memo: dto.memo ?? null,
     });
     try {

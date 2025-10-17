@@ -11,7 +11,6 @@ import {
   Min,
   Matches,
   ArrayUnique,
-  ArrayNotEmpty,
   IsNotEmpty,
   ValidateNested,
 } from 'class-validator';
@@ -47,9 +46,9 @@ export class CreateGraduateDto {
   @IsNotEmpty()
   email!: string;
 
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  address!: string;
+  address?: string;
 
   @IsEnum(DepartmentEnum)
   @IsNotEmpty()
@@ -70,16 +69,16 @@ export class CreateGraduateDto {
   @IsString({ each: true })
   certificates!: string[];
 
+  @IsOptional()
   @IsArray()
   @IsEnum(DesiredFieldEnum, { each: true })
   @ArrayUnique()
-  @ArrayNotEmpty()
-  desiredField!: DesiredFieldEnum[];
+  desiredField?: DesiredFieldEnum[];
 
+  @IsOptional()
   @IsArray()
   @IsEnum(StatusEnum, { each: true })
-  @ArrayNotEmpty()
-  currentStatus!: StatusEnum[];
+  currentStatus?: StatusEnum[];
 
   @IsInt()
   graduationYear!: number;

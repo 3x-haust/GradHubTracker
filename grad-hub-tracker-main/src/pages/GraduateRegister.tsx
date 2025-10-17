@@ -194,8 +194,7 @@ export default function GraduateRegister() {
                       if (!address) msgs.push(`${colRefByIndex(5)}: 주소 비어있음`)
                       if (!department) msgs.push(`${colRefByIndex(6)}: 졸업학과 비어있음`)
                       if (!email) msgs.push(`${colRefByIndex(10)}: 이메일 비어있음`)
-                      if (!desired) msgs.push(`${colRefByIndex(13)}: 희망분야 비어있음 (최소 1개)`) 
-                      if (!status) msgs.push(`${colRefByIndex(14)}: 현재상태 비어있음 (최소 1개)`)
+                      
                       if (name && !isKoreanName(name)) msgs.push(`${colRefByIndex(1)}: 이름은 한글만 허용`)
                       if (birthDate && !isValidDate(birthDate)) msgs.push(`${colRefByIndex(3)}: 생년월일 형식 오류(YYYY-MM-DD, YYYY.M.D, YYYY.MM.DD, YYYYMMDD, 또는 엑셀 숫자 날짜)`) 
                       if (phone && !isValidPhone(phone)) msgs.push(`${colRefByIndex(4)}: 연락처 형식 오류(010-1234-5678)`)
@@ -210,18 +209,14 @@ export default function GraduateRegister() {
                         .map(s => s.trim())
                         .filter(Boolean)
                         .filter(s => !desiredAllow.includes(s as DesiredField))
-                      if ((desired || '').split(',').map(s=>s.trim()).filter(Boolean).length === 0) {
-                        msgs.push(`${colRefByIndex(13)}: 희망분야 최소 1개 선택 필요`)
-                      }
+                      
                       if (invalidDesired.length > 0) msgs.push(`${colRefByIndex(13)}: 희망분야 허용값 아님(${invalidDesired.join(', ')})`)
                       const invalidStatus = (status || '')
                         .split(',')
                         .map(s => s.trim())
                         .filter(Boolean)
                         .filter(s => !statusAllow.includes(s as StatusOption))
-                      if ((status || '').split(',').map(s=>s.trim()).filter(Boolean).length === 0) {
-                        msgs.push(`${colRefByIndex(14)}: 현재상태 최소 1개 선택 필요`)
-                      }
+                      
                       if (invalidStatus.length > 0) msgs.push(`${colRefByIndex(14)}: 현재상태 허용값 아님(${invalidStatus.join(', ')})`)
                       const empPairs = (employment || '').split(';').map(s => s.trim()).filter(Boolean)
                       const badEmp = empPairs.filter(p => {

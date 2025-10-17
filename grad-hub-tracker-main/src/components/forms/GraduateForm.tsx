@@ -30,7 +30,7 @@ const graduateSchema = z.object({
     .string()
     .min(1, "연락처를 입력해주세요")
     .regex(/^010-\d{4}-\d{4}$/, "전화번호 형식은 010-1234-5678 이어야 합니다"),
-  address: z.string().min(1, "주소를 입력해주세요"),
+  address: z.string().optional(),
   department: z.string().min(1, "졸업학과를 선택해주세요"),
   grade: z.preprocess((v) => (v === '' || v == null ? undefined : Number(v)), z.number().min(0).max(100, "성적은 0-100% 사이여야 합니다").optional()),
   attendance: z.string().optional(),
@@ -44,8 +44,8 @@ const graduateSchema = z.object({
     school: z.string(),
     period: z.string()
   })).default([]),
-  desiredField: z.array(z.string()).min(1, "희망분야를 선택해주세요"),
-  currentStatus: z.array(z.string()).min(1, "현재상태를 선택해주세요"),
+  desiredField: z.array(z.string()).optional().default([]),
+  currentStatus: z.array(z.string()).optional().default([]),
   memo: z.string().optional()
 })
 
@@ -387,7 +387,7 @@ export default function GraduateForm({ onBack }: GraduateFormProps) {
                 name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>주소 *</FormLabel>
+                    <FormLabel>주소</FormLabel>
                     <FormControl>
                       <Textarea placeholder="주소를 입력하세요" {...field} />
                     </FormControl>
