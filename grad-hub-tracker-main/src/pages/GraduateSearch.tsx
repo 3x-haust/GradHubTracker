@@ -10,7 +10,7 @@ import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 import { GraduateRecord, DesiredField, StatusOption } from "@/lib/types"
 import { useGraduates } from "@/stores/graduates"
-import { assetUrl } from "@/lib/api"
+import { assetUrl, api } from "@/lib/api"
 import { useNavigate } from "react-router-dom"
 import ExcelJS from "exceljs"
 import { useAuth } from "@/stores/auth"
@@ -52,6 +52,8 @@ export default function GraduateSearch() {
   useEffect(() => { fetchRef.current = grads.fetch }, [grads.fetch])
   const [filteredGraduates, setFilteredGraduates] = useState<GraduateRecord[]>([])
   const [currentPage, setCurrentPage] = useState(1)
+  const [allGraduates, setAllGraduates] = useState<GraduateRecord[] | null>(null)
+  const [loadingAll, setLoadingAll] = useState(false)
   const [error, setError] = useState<string>("")
   // 서버 페이지네이션을 사용하므로 클라이언트 단 분할은 하지 않습니다.
 
@@ -88,14 +90,36 @@ export default function GraduateSearch() {
     setCurrentPage(serverCurrentPage)
   }, [grads.items, serverCurrentPage])
 
-  const handleSearch = () => {
+  const loadAll = async () => {
+    if (allGraduates && allGraduates.length > 0) return allGraduates
+    setLoadingAll(true)
+    try {
+      const first = await api<{ items: GraduateRecord[]; total: number; page: number; pageSize: number }>(`/graduates?page=1`)
+      const results: GraduateRecord[] = [...first.items]
+      const totalPages = Math.max(1, Math.ceil(first.total / first.pageSize))
+      for (let p = 2; p <= totalPages; p++) {
+        const res = await api<{ items: GraduateRecord[]; total: number; page: number; pageSize: number }>(`/graduates?page=${p}`)
+        results.push(...res.items)
+      }
+      setAllGraduates(results)
+      return results
+    } catch (e) {
+      setError("전체 데이터를 불러오지 못했습니다.")
+      return grads.items
+    } finally {
+      setLoadingAll(false)
+    }
+  }
+
+  const handleSearch = async () => {
     const desiredFilter = desiredFields.includes(searchFilters.desiredField as DesiredField)
       ? (searchFilters.desiredField as DesiredField)
       : undefined
     const statusFilter = statusOptions.includes(searchFilters.currentStatus as StatusOption)
       ? (searchFilters.currentStatus as StatusOption)
       : undefined
-  const filtered = grads.items.filter((g) => {
+    const base = await loadAll()
+    const filtered = (base || []).filter((g) => {
       const birthDateStr = g.birthDate ? format(new Date(g.birthDate), "yyyy-MM-dd") : ""
       const matchCert = searchFilters.certificate
         ? g.certificates.some((c) => c.includes(searchFilters.certificate))
@@ -112,15 +136,15 @@ export default function GraduateSearch() {
         empMatch &&
         eduMatch &&
         (!searchFilters.phone || g.phone.includes(searchFilters.phone)) &&
-        (!searchFilters.email || g.email.includes(searchFilters.email)) &&
-        (!searchFilters.address || g.address.includes(searchFilters.address)) &&
+        (!searchFilters.email || (g.email || "").includes(searchFilters.email)) &&
+        (!searchFilters.address || (g.address || "").includes(searchFilters.address)) &&
         (!searchFilters.graduationYear || g.graduationYear.toString() === searchFilters.graduationYear) &&
         (!searchFilters.gender || g.gender === searchFilters.gender) &&
         (!searchFilters.department || g.department === searchFilters.department) &&
   (!desiredFilter || g.desiredField.includes(desiredFilter)) &&
   (!statusFilter || g.currentStatus.includes(statusFilter)) &&
         (!searchFilters.attendance || g.attendance === searchFilters.attendance) &&
-        (!searchFilters.minGrade || g.grade >= Number(searchFilters.minGrade)) &&
+        (!searchFilters.minGrade || (typeof g.grade === 'number' && g.grade >= Number(searchFilters.minGrade))) &&
         (!searchFilters.birthDate || birthDateStr === format(searchFilters.birthDate, "yyyy-MM-dd")) &&
         matchCert && employmentDurationMatch
       )
@@ -147,9 +171,12 @@ export default function GraduateSearch() {
     searchFilters.certificate
   )
 
-  const displayedGraduates = hasActiveFilters ? filteredGraduates : grads.items
+  const itemsPerPage = 20
+  const displayedGraduates = hasActiveFilters
+    ? filteredGraduates.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+    : grads.items
   const totalPages = hasActiveFilters
-    ? 1
+    ? Math.max(1, Math.ceil(filteredGraduates.length / itemsPerPage))
     : Math.max(1, Math.ceil(serverTotal / serverPageSize))
 
   const handleExportXlsx = async () => {
@@ -414,9 +441,9 @@ export default function GraduateSearch() {
           </div>
 
           <div className="flex gap-2">
-            <Button onClick={handleSearch} className="bg-gradient-primary">
+            <Button onClick={handleSearch} className="bg-gradient-primary" disabled={loadingAll}>
               <Search className="h-4 w-4 mr-2" />
-              검색
+              {loadingAll ? "검색 중..." : "검색"}
             </Button>
             <Button variant="outline" onClick={() => {
               setSearchFilters({
@@ -456,7 +483,7 @@ export default function GraduateSearch() {
       
       <Card className="bg-gradient-card shadow-card">
         <CardHeader>
-          <CardTitle>검색 결과 ({filteredGraduates.length}명)</CardTitle>
+          <CardTitle>검색 결과 ({hasActiveFilters ? filteredGraduates.length : serverTotal}명)</CardTitle>
           <CardDescription>
             검색된 졸업생 목록입니다
           </CardDescription>
@@ -519,9 +546,9 @@ export default function GraduateSearch() {
                           <Badge variant="secondary">{graduate.graduationYear}년 졸업</Badge>
                         </div>
                         <div className="text-sm">
-                          <span className="font-medium">성적:</span> {graduate.grade}% 
+                          <span className="font-medium">성적:</span> {graduate.grade ?? "-"}{typeof graduate.grade === 'number' ? '%' : ''}
                           <span className="mx-2">|</span>
-                          <span className="font-medium">근태:</span> {graduate.attendance}
+                          <span className="font-medium">근태:</span> {graduate.attendance ?? "-"}
                         </div>
                         <div className="flex flex-wrap gap-1">
                           {graduate.certificates.map((cert, index) => (
@@ -595,6 +622,20 @@ export default function GraduateSearch() {
                       setError("페이지를 불러오지 못했습니다.")
                     }
                   }}
+                >
+                  {page}
+                </Button>
+              ))}
+            </div>
+          )}
+          {hasActiveFilters && totalPages > 1 && (
+            <div className="flex justify-center gap-2 mt-6">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <Button
+                  key={page}
+                  variant={page === currentPage ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentPage(page)}
                 >
                   {page}
                 </Button>

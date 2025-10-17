@@ -5,12 +5,12 @@ export type StatusOption = "구직중" | "교육중" | "재학중" | "재직중"
 
 export interface EmploymentItem {
   company: string;
-  period: string;
+  period?: string;
 }
 
 export interface EducationItem {
   school: string;
-  period: string;
+  period?: string;
 }
 
 export interface GraduateRecord {
@@ -23,10 +23,10 @@ export interface GraduateRecord {
   phone: string;
   address: string;
   department: string;
-  grade: number;
-  attendance: AttendanceLevel;
+  grade?: number | null;
+  attendance?: AttendanceLevel | null;
   certificates: string[];
-  email: string;
+  email?: string | null;
   employmentHistory: EmploymentItem[];
   educationHistory: EducationItem[];
   desiredField: DesiredField[];
