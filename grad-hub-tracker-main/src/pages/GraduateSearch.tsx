@@ -44,15 +44,28 @@ export default function GraduateSearch() {
     certificate: "",
   })
   const grads = useGraduatesData()
+  const serverTotal = useGraduates((s) => s.total)
+  const serverPageSize = useGraduates((s) => s.pageSize)
+  const serverCurrentPage = useGraduates((s) => s.currentPage)
   const didFetchRef = useRef(false)
   const fetchRef = useRef(grads.fetch)
   useEffect(() => { fetchRef.current = grads.fetch }, [grads.fetch])
   const [filteredGraduates, setFilteredGraduates] = useState<GraduateRecord[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [error, setError] = useState<string>("")
-  const itemsPerPage = 5
+  // 서버 페이지네이션을 사용하므로 클라이언트 단 분할은 하지 않습니다.
 
-  const departments = ["유헬스시스템과", "유헬스디자인과", "의료IT과", "보건간호과", "3D콘텐츠디자인과", "건강과학과", "의료미용과"]
+  const departments = [
+    "유헬스시스템과",
+    "유헬스디자인과",
+    "의료IT과",
+    "의료비즈니스과",
+    "디지털 의료IT과",
+    "보건간호과",
+    "3D콘텐츠디자인과",
+    "건강과학과",
+    "의료미용과",
+  ]
   const desiredFields: DesiredField[] = ["제조", "사무", "피부미용", "간호", "보안", "서비스", "기타"]
   const statusOptions: StatusOption[] = ["구직중", "교육중", "재학중", "재직중", "군복무"]
   const graduationYears = Array.from({length: 15}, (_, i) => new Date().getFullYear() - i)
@@ -72,7 +85,8 @@ export default function GraduateSearch() {
 
   useEffect(() => {
     setFilteredGraduates(grads.items)
-  }, [grads.items])
+    setCurrentPage(serverCurrentPage)
+  }, [grads.items, serverCurrentPage])
 
   const handleSearch = () => {
     const desiredFilter = desiredFields.includes(searchFilters.desiredField as DesiredField)
@@ -115,12 +129,28 @@ export default function GraduateSearch() {
     setCurrentPage(1)
   }
 
-  const totalPagesRaw = Math.ceil(filteredGraduates.length / itemsPerPage)
-  const totalPages = Math.min(totalPagesRaw, 5)
-  const paginatedGraduates = filteredGraduates.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+  const hasActiveFilters = !!(
+    searchFilters.name ||
+    searchFilters.employment ||
+    searchFilters.school ||
+    searchFilters.graduationYear ||
+    searchFilters.gender ||
+    searchFilters.department ||
+    searchFilters.desiredField ||
+    searchFilters.currentStatus ||
+    searchFilters.birthDate ||
+    searchFilters.phone ||
+    searchFilters.email ||
+    searchFilters.address ||
+    searchFilters.attendance ||
+    searchFilters.minGrade ||
+    searchFilters.certificate
   )
+
+  const displayedGraduates = hasActiveFilters ? filteredGraduates : grads.items
+  const totalPages = hasActiveFilters
+    ? 1
+    : Math.max(1, Math.ceil(serverTotal / serverPageSize))
 
   const handleExportXlsx = async () => {
     const wb = new ExcelJS.Workbook()
@@ -433,7 +463,7 @@ export default function GraduateSearch() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {paginatedGraduates.map((graduate) => (
+            {displayedGraduates.map((graduate) => (
               <div key={graduate.id} className="border rounded-lg p-4 bg-card hover:shadow-card transition-shadow">
                 <div className="flex items-start gap-4">
                   <Avatar className="h-16 w-16">
@@ -530,14 +560,13 @@ export default function GraduateSearch() {
                     <Button size="sm" variant="outline" onClick={async () => {
                       try {
                         await grads.remove(graduate.id)
-                        setFilteredGraduates((prev) => {
-                          const updated = prev.filter((g) => g.id !== graduate.id)
-                          const newTotalPages = Math.max(1, Math.ceil(updated.length / itemsPerPage))
-                          if (currentPage > newTotalPages) {
-                            setCurrentPage(newTotalPages)
-                          }
-                          return updated
-                        })
+                        if (hasActiveFilters) {
+                          setFilteredGraduates((prev) => prev.filter((g) => g.id !== graduate.id))
+                        } else {
+                          const nextPage = serverCurrentPage
+                          await fetchRef.current({ page: nextPage })
+                          setCurrentPage(nextPage)
+                        }
                       } catch (e) {
                         setError("삭제에 실패했습니다. 다시 시도해주세요.")
                       }
@@ -551,14 +580,21 @@ export default function GraduateSearch() {
           </div>
 
           
-          {totalPages > 1 && (
+          {!hasActiveFilters && totalPages > 1 && (
             <div className="flex justify-center gap-2 mt-6">
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                 <Button
                   key={page}
-                  variant={page === currentPage ? "default" : "outline"}
+                  variant={page === serverCurrentPage ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setCurrentPage(page)}
+                  onClick={async () => {
+                    try {
+                      await fetchRef.current({ page })
+                      setCurrentPage(page)
+                    } catch (e) {
+                      setError("페이지를 불러오지 못했습니다.")
+                    }
+                  }}
                 >
                   {page}
                 </Button>

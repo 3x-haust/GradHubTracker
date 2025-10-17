@@ -150,7 +150,7 @@ export default function GraduateForm({ onBack }: GraduateFormProps) {
     "유헬스디자인과",
     "의료IT과",
     "의료비즈니스과",
-    "디지털 의료IT과",
+    "디지털의료IT과",
     "보건간호과",
     "3D콘텐츠디자인과",
     "건강과학과",
