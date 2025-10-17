@@ -53,7 +53,7 @@ export default function LoginWithGoogle() {
             const id_token = response.credential;
             await loginWithGoogleIdToken(id_token);
           } catch (e) {
-            // console.error('Login failed', e);
+            setError('Google 로그인에 실패했습니다. 다시 시도해주세요.');
           }
         },
       });

@@ -34,7 +34,7 @@ export class Graduate {
   gender!: '남' | '여';
 
   @Column({ type: 'date' })
-  birthDate!: string; // ISO yyyy-MM-dd
+  birthDate!: string;
 
   @Index('graduates_phone_idx')
   @Column({ type: 'varchar', length: 30 })

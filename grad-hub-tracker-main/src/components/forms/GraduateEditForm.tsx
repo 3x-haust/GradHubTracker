@@ -27,11 +27,11 @@ const schema = z.object({
   department: z.string().min(1),
   grade: z.coerce.number().min(0).max(100),
   attendance: z.enum(["상", "중", "하"]),
-  certificates: z.string().optional(), // comma separated
-  desiredField: z.string().optional(), // comma separated
-  currentStatus: z.string().optional(), // comma separated
-  employmentHistory: z.string().optional(), // semicolon of company:period
-  educationHistory: z.string().optional(), // semicolon of school:period
+  certificates: z.string().optional(),
+  desiredField: z.string().optional(),
+  currentStatus: z.string().optional(),
+  employmentHistory: z.string().optional(),
+  educationHistory: z.string().optional(),
   memo: z.string().optional(),
 });
 
@@ -124,7 +124,17 @@ export default function GraduateEditForm({ record, onBack }: { record: GraduateR
     }
   }
 
-  const departments = ["유헬스시스템과", "유헬스디자인과", "의료IT과", "보건간호과", "3D콘텐츠디자인과", "건강과학과", "의료미용과"]
+  const departments = [
+    "유헬스시스템과",
+    "유헬스디자인과",
+    "의료IT과",
+    "의료비즈니스과",
+    "디지털 의료IT과",
+    "보건간호과",
+    "3D콘텐츠디자인과",
+    "건강과학과",
+    "의료미용과",
+  ]
 
   return (
     <Card className="bg-gradient-card shadow-card">

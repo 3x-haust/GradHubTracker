@@ -117,7 +117,7 @@ export class GraduatesController {
       try {
         unlinkSync(path);
       } catch {
-        // ignore file errors
+        // ignore
       }
     }
     return this.service.clearPhoto(id, actor);

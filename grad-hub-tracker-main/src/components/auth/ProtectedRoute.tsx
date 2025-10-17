@@ -8,7 +8,6 @@ export default function ProtectedRoute({ children, role }: Props) {
   const location = useLocation();
   const [checking, setChecking] = useState<boolean>(false);
   const didFetch = useRef(false);
-  // Select only needed slices to minimize re-renders
   const token = useAuth((s) => s.token);
   const validated = useAuth((s) => s.validated);
   const me = useAuth((s) => s.me);
@@ -35,12 +34,11 @@ export default function ProtectedRoute({ children, role }: Props) {
     };
   }, [token, validated]);
 
-  const authedShallow = !!token && !!me; // user appears logged-in from local state
-  const authed = authedShallow && validated; // fully validated from server
+  const authedShallow = !!token && !!me; 
+  const authed = authedShallow && validated;
   const roleOk = useMemo(() => !role || (me && me.role === role), [role, me]);
   const approved = me?.approved !== false;
 
-  // Only block with a spinner when the user isn't authed yet
   if (checking && !authedShallow) {
     return <div className="p-6 text-center text-muted-foreground">확인 중...</div>;
   }

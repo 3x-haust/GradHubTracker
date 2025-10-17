@@ -145,7 +145,17 @@ export default function GraduateForm({ onBack }: GraduateFormProps) {
 
   const desiredFields = ["제조", "사무", "피부미용", "간호", "보안", "서비스", "기타"]
   const statusOptions = ["구직중", "교육중", "재학중", "재직중", "군복무"]
-  const departments = ["유헬스시스템과", "유헬스디자인과", "의료IT과", "보건간호과", "3D콘텐츠디자인과", "건강과학과", "의료미용과"]
+  const departments = [
+    "유헬스시스템과",
+    "유헬스디자인과",
+    "의료IT과",
+    "의료비즈니스과",
+    "디지털 의료IT과",
+    "보건간호과",
+    "3D콘텐츠디자인과",
+    "건강과학과",
+    "의료미용과",
+  ]
 
   return (
     <div className="space-y-6">

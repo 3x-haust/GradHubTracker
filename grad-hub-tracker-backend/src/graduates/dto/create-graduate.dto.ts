@@ -14,7 +14,7 @@ import {
   IsNotEmpty,
   ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import {
   DepartmentEnum,
   DesiredFieldEnum,
@@ -106,13 +106,18 @@ export class EmploymentItemDto {
   @IsNotEmpty()
   company!: string;
 
+  @Transform(({ value }): string | undefined =>
+    typeof value === 'string' && value.trim() === ''
+      ? undefined
+      : (value as string),
+  )
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
   @Matches(PERIOD_REGEX, {
     message:
       '기간 형식이 올바르지 않습니다. 예: 2025.01 또는 2025.01 - 2025.12 또는 2025.01.01 -',
   })
-  period!: string;
+  period?: string;
 }
 
 export class EducationItemDto {
@@ -120,11 +125,16 @@ export class EducationItemDto {
   @IsNotEmpty()
   school!: string;
 
+  @Transform(({ value }): string | undefined =>
+    typeof value === 'string' && value.trim() === ''
+      ? undefined
+      : (value as string),
+  )
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
   @Matches(PERIOD_REGEX, {
     message:
       '기간 형식이 올바르지 않습니다. 예: 2025.03 또는 2025.03 - 또는 2025.03.01 - 2028.02.28',
   })
-  period!: string;
+  period?: string;
 }

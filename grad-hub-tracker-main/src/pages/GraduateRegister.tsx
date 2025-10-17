@@ -220,22 +220,28 @@ export default function GraduateRegister() {
                       if (invalidStatus.length > 0) msgs.push(`${colRefByIndex(14)}: 현재상태 허용값 아님(${invalidStatus.join(', ')})`)
                       const empPairs = (employment || '').split(';').map(s => s.trim()).filter(Boolean)
                       const badEmp = empPairs.filter(p => {
-                        if (!p.includes(':') && !p.includes('：')) return true
+                        if (!p.includes(':') && !p.includes('：')) {
+                          return (p.trim().length === 0)
+                        }
                         const [company, period] = p.split(/:|：/)
                         const companyOk = (company || '').trim().length > 0
-                        const periodOk = isValidPeriod((period || '').trim())
+                        const periodStr = (period || '').trim()
+                        const periodOk = periodStr === '' || isValidPeriod(periodStr)
                         return !(companyOk && periodOk)
                       })
-                      if (badEmp.length > 0) msgs.push(`${colRefByIndex(11)}: 취업처/기간 형식 오류(회사:기간; 세미콜론 구분, 기간 예: 2025.01 - 2025.12 또는 2025.01.01 - )`)
+                      if (badEmp.length > 0) msgs.push(`${colRefByIndex(11)}: 취업처/기간 형식 오류(회사 또는 회사:기간; 세미콜론 구분, 기간 예: 2025.01 - 2025.12 또는 2025.01.01 - )`)
                       const eduPairs = (education || '').split(';').map(s => s.trim()).filter(Boolean)
                       const badEdu = eduPairs.filter(p => {
-                        if (!p.includes(':') && !p.includes('：')) return true
+                        if (!p.includes(':') && !p.includes('：')) {
+                          return (p.trim().length === 0)
+                        }
                         const [school, period] = p.split(/:|：/)
                         const schoolOk = (school || '').trim().length > 0
-                        const periodOk = isValidPeriod((period || '').trim())
+                        const periodStr = (period || '').trim()
+                        const periodOk = periodStr === '' || isValidPeriod(periodStr)
                         return !(schoolOk && periodOk)
                       })
-                      if (badEdu.length > 0) msgs.push(`${colRefByIndex(12)}: 대학명/기간 형식 오류(대학:기간; 세미콜론 구분, 기간 예: 2025.03 - 또는 2025.03.01 - 2028.02.28)`)
+                      if (badEdu.length > 0) msgs.push(`${colRefByIndex(12)}: 대학명/기간 형식 오류(대학 또는 대학:기간; 세미콜론 구분, 기간 예: 2025.03 - 또는 2025.03.01 - 2028.02.28)`)
                       return msgs
                     }
 
@@ -510,7 +516,17 @@ const desiredAllow: DesiredField[] = ["제조", "사무", "피부미용", "간�
 const statusAllow: StatusOption[] = ["구직중", "교육중", "재학중", "재직중", "군복무"]
 const attendanceAllow: AttendanceLevel[] = ["상", "중", "하"]
 const genderAllow: Gender[] = ["남", "여"]
-const departments = ["유헬스시스템과", "유헬스디자인과", "의료IT과", "보건간호과", "3D콘텐츠디자인과", "건강과학과", "의료미용과"]
+const departments = [
+  "유헬스시스템과",
+  "유헬스디자인과",
+  "의료IT과",
+  "의료비즈니스과",
+  "디지털 의료IT과",
+  "보건간호과",
+  "3D콘텐츠디자인과",
+  "건강과학과",
+  "의료미용과",
+]
 
 function parseCSV(text: string): string[][] {
   const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n")
@@ -620,17 +636,17 @@ async function downloadXlsxTemplate() {
     "성별",
     "생년월일(YYYY-MM-DD)",
     "연락처(010-1234-5678)",
-    "주소",
+    "주소(선택)",
     "졸업학과",
-    "성적(%)",
-    "근태(상/중/하)",
-    "자격증(쉼표구분)",
-    "이메일",
-    "취업처/기간(예: 회사명:2024.01-2024.12;세미콜론구분)",
-    "대학명/기간(예: 대학명:2024.03-2028.02;세미콜론구분)",
-    "희망분야(복수,쉼표)",
-    "현재상태(복수,쉼표)",
-    "메모",
+    "성적(%)(선택)",
+    "근태(상/중/하)(선택)",
+    "자격증(쉼표구분)(선택)",
+    "이메일(선택)",
+    "취업처(회사 또는 회사:기간; 세미콜론 구분, 기간 예: 2025.01 또는 2025.01 - 또는 2025.01-2025.12)(선택)",
+    "대학(대학 또는 대학:기간; 세미콜론 구분, 기간 예: 2025.03 또는 2025.03 - 또는 2025.03.01 - 2028.02.28)(선택)",
+    "희망분야(복수,쉼표)(선택)",
+    "현재상태(복수,쉼표)(선택)",
+    "메모(선택)",
   ]
   ws.addRow(header)
   ws.getRow(1).font = { bold: true }

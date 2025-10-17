@@ -7,6 +7,8 @@ export enum DepartmentEnum {
   유헬스시스템과 = '유헬스시스템과',
   유헬스디자인과 = '유헬스디자인과',
   의료IT과 = '의료IT과',
+  의료비즈니스과 = '의료비즈니스과',
+  디지털_의료IT과 = '디지털 의료IT과',
   보건간호과 = '보건간호과',
   _3D콘텐츠디자인과 = '3D콘텐츠디자인과',
   건강과학과 = '건강과학과',
@@ -33,10 +35,10 @@ export enum StatusEnum {
 
 export type Employment = {
   company: string;
-  period: string; // e.g., "2023.03~2024.06"
+  period?: string;
 };
 
 export type Education = {
   school: string;
-  period: string; // e.g., "2023.03~2024.06"
+  period?: string;
 };
