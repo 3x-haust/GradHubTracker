@@ -191,9 +191,7 @@ export default function GraduateRegister() {
                       if (!gender) msgs.push(`${colRefByIndex(2)}: 성별 비어있음`)
                       if (!birthDate) msgs.push(`${colRefByIndex(3)}: 생년월일 비어있음`)
                       if (!phone) msgs.push(`${colRefByIndex(4)}: 연락처 비어있음`)
-                      if (!address) msgs.push(`${colRefByIndex(5)}: 주소 비어있음`)
                       if (!department) msgs.push(`${colRefByIndex(6)}: 졸업학과 비어있음`)
-                      if (!email) msgs.push(`${colRefByIndex(10)}: 이메일 비어있음`)
                       
                       if (name && !isKoreanName(name)) msgs.push(`${colRefByIndex(1)}: 이름은 한글만 허용`)
                       if (birthDate && !isValidDate(birthDate)) msgs.push(`${colRefByIndex(3)}: 생년월일 형식 오류(YYYY-MM-DD, YYYY.M.D, YYYY.MM.DD, YYYYMMDD, 또는 엑셀 숫자 날짜)`) 
@@ -716,10 +714,10 @@ function mapRowToCreatePayload(r: string[]): Omit<GraduateRecord, 'id' | 'create
     phone: phone || "",
     address: address || "",
     department: department || "",
-    grade: typeof gradeNum === 'number' && !isNaN(gradeNum) ? gradeNum : undefined as unknown as number,
-    attendance: attendanceAllow.includes(attendance as AttendanceLevel) ? (attendance as AttendanceLevel) : "중",
+  grade: typeof gradeNum === 'number' && !isNaN(gradeNum) ? gradeNum : undefined as unknown as number,
+  attendance: attendanceAllow.includes(attendance as AttendanceLevel) ? (attendance as AttendanceLevel) : undefined,
     certificates: certList,
-    email: email || "",
+  email: (email && email.trim()) ? email.trim() : undefined,
     employmentHistory: parseEmploymentPairs(employment),
     educationHistory: parseEducationPairs(education),
     desiredField: desiredList,

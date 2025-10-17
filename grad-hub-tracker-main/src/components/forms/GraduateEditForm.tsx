@@ -25,8 +25,8 @@ const schema = z.object({
   email: z.string().email().optional().or(z.literal("")).transform((v) => (v === "" ? undefined : v)),
   address: z.string().min(1),
   department: z.string().min(1),
-  grade: z.coerce.number().min(0).max(100),
-  attendance: z.enum(["상", "중", "하"]),
+  grade: z.preprocess((v) => (v === '' || v == null ? undefined : Number(v)), z.number().min(0).max(100)).optional(),
+  attendance: z.enum(["상", "중", "하"]).optional(),
   certificates: z.string().optional(),
   desiredField: z.string().optional(),
   currentStatus: z.string().optional(),
@@ -52,13 +52,17 @@ export default function GraduateEditForm({ record, onBack }: { record: GraduateR
       email: record.email || "",
       address: record.address,
       department: record.department,
-      grade: record.grade,
-      attendance: record.attendance,
+      grade: record.grade ?? undefined,
+      attendance: record.attendance ?? undefined,
       certificates: (record.certificates || []).join(", "),
       desiredField: (record.desiredField || []).join(", "),
       currentStatus: (record.currentStatus || []).join(", "),
-      employmentHistory: (record.employmentHistory || []).map((e) => `${e.company}:${e.period}`).join("; "),
-      educationHistory: (record.educationHistory || []).map((e) => `${e.school}:${e.period}`).join("; "),
+      employmentHistory: (record.employmentHistory || [])
+        .map((e) => (e.period ? `${e.company}:${e.period}` : `${e.company}`))
+        .join("; "),
+      educationHistory: (record.educationHistory || [])
+        .map((e) => (e.period ? `${e.school}:${e.period}` : `${e.school}`))
+        .join("; "),
       memo: record.memo || "",
     },
   })
@@ -109,13 +113,13 @@ export default function GraduateEditForm({ record, onBack }: { record: GraduateR
         email: data.email,
         address: data.address,
         department: data.department,
-        grade: data.grade,
-        attendance: data.attendance as GraduateRecord["attendance"],
+        grade: typeof data.grade === 'number' ? data.grade : undefined,
+        attendance: (data.attendance as GraduateRecord["attendance"]) ?? undefined,
         certificates: toList(data.certificates),
         desiredField: toList(data.desiredField) as GraduateRecord["desiredField"],
         currentStatus: toList(data.currentStatus) as GraduateRecord["currentStatus"],
-        employmentHistory: toPairs(data.employmentHistory).map((x) => ({ company: x.first, period: x.second })),
-        educationHistory: toPairs(data.educationHistory).map((x) => ({ school: x.first, period: x.second })),
+        employmentHistory: toPairs(data.employmentHistory).map((x) => ({ company: x.first, period: x.second || undefined })),
+        educationHistory: toPairs(data.educationHistory).map((x) => ({ school: x.first, period: x.second || undefined })),
         memo: data.memo ?? null,
       })
       onBack()
