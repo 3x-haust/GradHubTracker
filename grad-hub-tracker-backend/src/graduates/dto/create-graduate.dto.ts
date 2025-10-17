@@ -42,9 +42,9 @@ export class CreateGraduateDto {
   @IsNotEmpty()
   phone!: string;
 
+  @IsOptional()
   @IsEmail()
-  @IsNotEmpty()
-  email!: string;
+  email?: string;
 
   @IsOptional()
   @IsString()

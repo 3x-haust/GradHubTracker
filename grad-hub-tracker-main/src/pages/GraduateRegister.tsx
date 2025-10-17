@@ -249,8 +249,8 @@ export default function GraduateRegister() {
                           errors.push(`${i + 2}행 유효성 오류: ${clientErrors.join('; ')}`)
                           continue
                         }
-                        const rec = mapRowToGraduate(r)
-                        await useGraduates.getState().create(rec as unknown as Omit<GraduateRecord, 'id' | 'createdAt' | 'updatedAt'>)
+                        const payload = mapRowToCreatePayload(r)
+                        await useGraduates.getState().create(payload as unknown as Omit<GraduateRecord, 'id' | 'createdAt' | 'updatedAt'>)
                         success++
                       } catch (err: unknown) {
                         let msg = err instanceof Error ? err.message : ''
@@ -666,7 +666,7 @@ async function parseXlsx(ab: ArrayBuffer): Promise<string[][]> {
   return rows.map((row) => row.map((c) => (c == null ? '' : String(c))))
 }
 
-function mapRowToGraduate(r: string[]): GraduateRecord {
+function mapRowToCreatePayload(r: string[]): Omit<GraduateRecord, 'id' | 'createdAt' | 'updatedAt'> {
   const [
     graduationYear,
     name,
@@ -686,32 +686,29 @@ function mapRowToGraduate(r: string[]): GraduateRecord {
     memo,
   ] = r
 
-  const nowIso = new Date().toISOString()
   const desiredList = (desired || "").split(",").map((s) => s.trim()).filter((s): s is DesiredField => desiredAllow.includes(s as DesiredField))
   const statusList = (status || "").split(",").map((s) => s.trim()).filter((s): s is StatusOption => statusAllow.includes(s as StatusOption))
   const certList = (certificates || "").split(",").map((s) => s.trim()).filter(Boolean)
+  const gradeStr = (grade ?? '').toString().trim()
+  const gradeNum = gradeStr === '' ? undefined : Number(gradeStr)
 
   return {
-    id: uuidv4(),
-    photoUrl: undefined,
     graduationYear: Number(graduationYear) || new Date().getFullYear(),
     name: name || "",
     gender: genderAllow.includes(gender as Gender) ? (gender as Gender) : "남",
-  birthDate: normalizeDateInput(birthDate) || "",
+    birthDate: normalizeDateInput(birthDate) || "",
     phone: phone || "",
     address: address || "",
     department: department || "",
-    grade: Number(grade) || 0,
+    grade: typeof gradeNum === 'number' && !isNaN(gradeNum) ? gradeNum : undefined as unknown as number,
     attendance: attendanceAllow.includes(attendance as AttendanceLevel) ? (attendance as AttendanceLevel) : "중",
     certificates: certList,
-  email: email || "",
+    email: email || "",
     employmentHistory: parseEmploymentPairs(employment),
     educationHistory: parseEducationPairs(education),
     desiredField: desiredList,
     currentStatus: statusList,
     memo: memo || "",
-    createdAt: nowIso,
-    updatedAt: nowIso,
   }
 }
 
@@ -722,7 +719,7 @@ function parseEmploymentPairs(input: string): { company: string; period: string 
     .map((s) => s.trim())
     .filter(Boolean)
     .map((pair) => {
-      const [company, period] = pair.split(":")
+      const [company, period] = pair.split(/:|：/)
       return {
         company: (company || "").trim(),
         period: (period || "").trim(),
@@ -737,7 +734,7 @@ function parseEducationPairs(input: string): { school: string; period: string }[
     .map((s) => s.trim())
     .filter(Boolean)
     .map((pair) => {
-      const [school, period] = pair.split(":")
+      const [school, period] = pair.split(/:|：/)
       return {
         school: (school || "").trim(),
         period: (period || "").trim(),

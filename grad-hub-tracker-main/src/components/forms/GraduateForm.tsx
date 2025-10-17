@@ -35,7 +35,7 @@ const graduateSchema = z.object({
   grade: z.preprocess((v) => (v === '' || v == null ? undefined : Number(v)), z.number().min(0).max(100, "성적은 0-100% 사이여야 합니다").optional()),
   attendance: z.string().optional(),
   certificates: z.array(z.string()).default([]),
-  email: z.string().email("올바른 이메일 형식이 아닙니다"),
+  email: z.preprocess((v) => (typeof v === 'string' && v.trim() === '' ? undefined : v), z.string().email("올바른 이메일 형식이 아닙니다").optional()),
   employmentHistory: z.array(z.object({
     company: z.string(),
     period: z.string()
@@ -84,10 +84,10 @@ export default function GraduateForm({ onBack }: GraduateFormProps) {
       phone: data.phone,
       address: data.address,
       department: data.department,
-      grade: typeof data.grade === 'number' ? data.grade : 0,
-      attendance: (data.attendance as GraduateRecord["attendance"]) ?? '중',
+  grade: typeof data.grade === 'number' ? data.grade : undefined,
+  attendance: (data.attendance as GraduateRecord["attendance"]) ?? undefined,
       certificates: data.certificates ?? [],
-      email: data.email,
+  email: data.email,
       employmentHistory: (data.employmentHistory ?? []).map((item) => ({
         company: item.company ?? "",
         period: item.period ?? "",
@@ -303,7 +303,7 @@ export default function GraduateForm({ onBack }: GraduateFormProps) {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>이메일 *</FormLabel>
+                      <FormLabel>이메일</FormLabel>
                       <FormControl>
                         <Input type="email" placeholder="example@email.com" {...field} />
                       </FormControl>
@@ -396,7 +396,6 @@ export default function GraduateForm({ onBack }: GraduateFormProps) {
                 )}
               />
 
-              {/* 자격증 */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <FormLabel>자격증</FormLabel>
@@ -424,7 +423,6 @@ export default function GraduateForm({ onBack }: GraduateFormProps) {
                 ))}
               </div>
 
-              {/* 취업처/취업기간 */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <FormLabel>취업처/취업기간</FormLabel>
@@ -469,7 +467,6 @@ export default function GraduateForm({ onBack }: GraduateFormProps) {
                 ))}
               </div>
 
-              {/* 대학명/재학기간 */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <FormLabel>대학명/재학기간</FormLabel>
@@ -514,13 +511,12 @@ export default function GraduateForm({ onBack }: GraduateFormProps) {
                 ))}
               </div>
 
-              {/* 희망분야 */}
               <FormField
                 control={form.control}
                 name="desiredField"
                 render={() => (
                   <FormItem>
-                    <FormLabel>희망분야 *</FormLabel>
+                    <FormLabel>희망분야</FormLabel>
                     <div className="grid grid-cols-3 md:grid-cols-4 gap-4">
                       {desiredFields.map((field) => (
                         <FormField
@@ -561,13 +557,12 @@ export default function GraduateForm({ onBack }: GraduateFormProps) {
                 )}
               />
 
-              {/* 현재상태 */}
               <FormField
                 control={form.control}
                 name="currentStatus"
                 render={() => (
                   <FormItem>
-                    <FormLabel>현재상태 *</FormLabel>
+                    <FormLabel>현재상태</FormLabel>
                     <div className="grid grid-cols-3 md:grid-cols-5 gap-4">
                       {statusOptions.map((status) => (
                         <FormField
@@ -608,7 +603,6 @@ export default function GraduateForm({ onBack }: GraduateFormProps) {
                 )}
               />
 
-              {/* 메모 */}
               <FormField
                 control={form.control}
                 name="memo"
