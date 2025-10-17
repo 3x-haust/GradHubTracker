@@ -82,7 +82,6 @@ export class GraduatesService {
       qb.where('g.name ILIKE :q OR g.phone ILIKE :q OR g.email ILIKE :q', {
         q: `%${params.q}%`,
       });
-      // employmentHistory.company contains q
       qb.orWhere(
         `EXISTS (
           SELECT 1 FROM jsonb_array_elements(g.employmentHistory) e
@@ -90,7 +89,6 @@ export class GraduatesService {
         )`,
         { q: `%${params.q}%` },
       );
-      // educationHistory.school contains q
       qb.orWhere(
         `EXISTS (
           SELECT 1 FROM jsonb_array_elements(g.educationHistory) e
@@ -185,7 +183,7 @@ export class GraduatesService {
       try {
         if (existsSync(path)) unlinkSync(path);
       } catch {
-        // ignore file removal errors
+        // ignore
       }
     }
     await this.repo.delete(id);
