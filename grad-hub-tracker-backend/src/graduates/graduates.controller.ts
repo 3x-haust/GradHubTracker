@@ -65,9 +65,35 @@ export class GraduatesController {
     return this.service.update(id, dto, actor);
   }
 
+  @Post('bulk')
+  bulk(
+    @Body()
+    body: {
+      items: CreateGraduateDto[];
+      mode?: 'insert' | 'upsert';
+      matchBy?: 'email' | 'name_birthDate' | 'phone' | 'phoneDigits';
+    },
+    @Query('actor') actor?: string,
+  ) {
+    const mode = body.mode === 'upsert' ? 'upsert' : 'insert';
+    const matchBy: 'email' | 'name_birthDate' | 'phone' | 'phoneDigits' =
+      body.matchBy ?? 'email';
+    return this.service.bulkUpsert({
+      items: body.items || [],
+      mode,
+      matchBy,
+      actorUserId: actor,
+    });
+  }
+
   @Delete(':id')
   remove(@Param('id') id: string, @Query('actor') actor?: string) {
     return this.service.remove(id, actor);
+  }
+
+  @Post('bulk-delete')
+  bulkDelete(@Body() body: { ids: string[] }, @Query('actor') actor?: string) {
+    return this.service.bulkDelete(body?.ids || [], actor);
   }
 
   @Post(':id/photo')

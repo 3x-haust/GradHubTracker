@@ -130,6 +130,94 @@ export class GraduatesService {
     return (await this.repo.findOne({ where: { name, birthDate } })) ?? null;
   }
 
+  async bulkUpsert(params: {
+    items: CreateGraduateDto[];
+    mode: 'insert' | 'upsert';
+    matchBy: 'email' | 'name_birthDate' | 'phone' | 'phoneDigits';
+    actorUserId?: string | null;
+  }) {
+    const results: Array<{
+      index: number;
+      ok: boolean;
+      id?: string;
+      action?: 'created' | 'updated';
+      reason?: string;
+    }> = [];
+    for (let i = 0; i < (params.items || []).length; i++) {
+      const dto = params.items[i];
+      try {
+        let target: Graduate | null = null;
+        if (params.mode === 'upsert') {
+          if (params.matchBy === 'email' && dto.email) {
+            target = await this.findByEmail(dto.email);
+          } else if (params.matchBy === 'name_birthDate') {
+            target = await this.findByNameBirthDate(dto.name, dto.birthDate);
+          } else if (params.matchBy === 'phoneDigits') {
+            const digitsOnly = (dto.phone || '').replace(/\D+/g, '');
+            target = await this.findByPhoneDigits(digitsOnly);
+          } else if (params.matchBy === 'phone') {
+            const g = await this.repo.findOne({ where: { phone: dto.phone } });
+            target = g ?? null;
+          }
+        }
+
+        if (!target) {
+          const created = await this.create(dto, params.actorUserId);
+          results.push({
+            index: i,
+            ok: true,
+            id: created.id,
+            action: 'created',
+          });
+        } else {
+          const patch: UpdateGraduateDto = {
+            ...(dto as unknown as Partial<UpdateGraduateDto>),
+          } as UpdateGraduateDto;
+          const updated = await this.update(
+            target.id,
+            patch,
+            params.actorUserId,
+          );
+          results.push({
+            index: i,
+            ok: true,
+            id: updated.id,
+            action: 'updated',
+          });
+        }
+      } catch (e) {
+        const { code } = this.extractPgError(e);
+        if (code === '23505') {
+          results.push({ index: i, ok: false, reason: '중복 데이터' });
+        } else {
+          results.push({
+            index: i,
+            ok: false,
+            reason: (e as Error)?.message || '오류',
+          });
+        }
+      }
+    }
+    return { ok: true, count: results.length, results };
+  }
+
+  async bulkDelete(ids: string[], actorUserId?: string | null) {
+    const results: Array<{ id: string; ok: boolean; reason?: string }> = [];
+    for (const id of ids || []) {
+      try {
+        await this.remove(id, actorUserId);
+        results.push({ id, ok: true });
+      } catch (e) {
+        results.push({
+          id,
+          ok: false,
+          reason: (e as Error)?.message || '오류',
+        });
+      }
+    }
+    return { ok: true, count: results.length, results };
+  }
+
   async update(
     id: string,
     dto: UpdateGraduateDto,

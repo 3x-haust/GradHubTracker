@@ -55,7 +55,26 @@ export default function GraduateSearch() {
   const [allGraduates, setAllGraduates] = useState<GraduateRecord[] | null>(null)
   const [loadingAll, setLoadingAll] = useState(false)
   const [error, setError] = useState<string>("")
-  // 서버 페이지네이션을 사용하므로 클라이언트 단 분할은 하지 않습니다.
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [pageSizeChoice, setPageSizeChoice] = useState<number>(20)
+
+  const hasActiveFilters = !!(
+    searchFilters.name ||
+    searchFilters.employment ||
+    searchFilters.school ||
+    searchFilters.graduationYear ||
+    searchFilters.gender ||
+    searchFilters.department ||
+    searchFilters.desiredField ||
+    searchFilters.currentStatus ||
+    searchFilters.birthDate ||
+    searchFilters.phone ||
+    searchFilters.email ||
+    searchFilters.address ||
+    searchFilters.attendance ||
+    searchFilters.minGrade ||
+    searchFilters.certificate
+  )
 
   const departments = [
     "유헬스시스템과",
@@ -86,9 +105,11 @@ export default function GraduateSearch() {
   }, [validated, me])
 
   useEffect(() => {
-    setFilteredGraduates(grads.items)
-    setCurrentPage(serverCurrentPage)
-  }, [grads.items, serverCurrentPage])
+    if (!hasActiveFilters) {
+      setFilteredGraduates(grads.items)
+      setCurrentPage(serverCurrentPage)
+    }
+  }, [grads.items, serverCurrentPage, hasActiveFilters])
 
   const loadAll = async () => {
     if (allGraduates && allGraduates.length > 0) return allGraduates
@@ -153,25 +174,9 @@ export default function GraduateSearch() {
     setCurrentPage(1)
   }
 
-  const hasActiveFilters = !!(
-    searchFilters.name ||
-    searchFilters.employment ||
-    searchFilters.school ||
-    searchFilters.graduationYear ||
-    searchFilters.gender ||
-    searchFilters.department ||
-    searchFilters.desiredField ||
-    searchFilters.currentStatus ||
-    searchFilters.birthDate ||
-    searchFilters.phone ||
-    searchFilters.email ||
-    searchFilters.address ||
-    searchFilters.attendance ||
-    searchFilters.minGrade ||
-    searchFilters.certificate
-  )
+  
 
-  const itemsPerPage = 20
+  const itemsPerPage = hasActiveFilters ? pageSizeChoice : serverPageSize
   const displayedGraduates = hasActiveFilters
     ? filteredGraduates.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
     : grads.items
@@ -489,10 +494,80 @@ export default function GraduateSearch() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Input
+                type="checkbox"
+                checked={displayedGraduates.length > 0 && displayedGraduates.every((g) => selectedIds.includes(g.id))}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedIds((prev) => Array.from(new Set([...prev, ...displayedGraduates.map((g) => g.id)])))
+                  } else {
+                    setSelectedIds((prev) => prev.filter((id) => !displayedGraduates.some((g) => g.id === id)))
+                  }
+                }}
+              />
+              <span className="text-sm text-muted-foreground">페이지 모두 선택</span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={selectedIds.length === 0}
+                onClick={async () => {
+                  try {
+                    await useGraduates.getState().bulkDelete(selectedIds)
+                    setFilteredGraduates((prev) => prev.filter((g) => !selectedIds.includes(g.id)))
+                    setSelectedIds([])
+                    if (!hasActiveFilters) {
+                      await fetchRef.current({ page: serverCurrentPage, pageSize: serverPageSize })
+                    }
+                  } catch (e) {
+                    setError("일괄 삭제에 실패했습니다.")
+                  }
+                }}
+              >
+                선택 삭제 ({selectedIds.length})
+              </Button>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">페이지당</span>
+              <Select value={String(pageSizeChoice)} onValueChange={async (v) => {
+                const n = Number(v)
+                setPageSizeChoice(n)
+                setCurrentPage(1)
+                if (!hasActiveFilters) {
+                  try {
+                    await fetchRef.current({ page: 1, pageSize: n })
+                  } catch {
+                    setError("페이지 크기 변경에 실패했습니다.")
+                  }
+                }
+              }}>
+                <SelectTrigger className="w-[100px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[10, 20, 50, 100, 500].map((n) => (
+                    <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div className="space-y-4">
             {displayedGraduates.map((graduate) => (
               <div key={graduate.id} className="border rounded-lg p-4 bg-card hover:shadow-card transition-shadow">
                 <div className="flex items-start gap-4">
+                  <div className="pt-1">
+                    <Input
+                      type="checkbox"
+                      checked={selectedIds.includes(graduate.id)}
+                      onChange={(e) => {
+                        const checked = e.target.checked
+                        setSelectedIds((prev) => checked ? [...prev, graduate.id] : prev.filter((id) => id !== graduate.id))
+                      }}
+                    />
+                  </div>
                   <Avatar className="h-16 w-16">
                     <AvatarImage src={assetUrl(graduate.photoUrl)} alt={graduate.name} />
                     <AvatarFallback className="bg-gradient-primary text-white text-lg">
@@ -591,7 +666,7 @@ export default function GraduateSearch() {
                           setFilteredGraduates((prev) => prev.filter((g) => g.id !== graduate.id))
                         } else {
                           const nextPage = serverCurrentPage
-                          await fetchRef.current({ page: nextPage })
+                          await fetchRef.current({ page: nextPage, pageSize: serverPageSize })
                           setCurrentPage(nextPage)
                         }
                       } catch (e) {
@@ -616,7 +691,7 @@ export default function GraduateSearch() {
                   size="sm"
                   onClick={async () => {
                     try {
-                      await fetchRef.current({ page })
+                      await fetchRef.current({ page, pageSize: serverPageSize })
                       setCurrentPage(page)
                     } catch (e) {
                       setError("페이지를 불러오지 못했습니다.")

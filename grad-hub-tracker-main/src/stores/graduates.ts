@@ -9,13 +9,15 @@ type GraduatesState = {
   loading: boolean;
   pageSize: number;
   currentPage: number;
-  fetch: (params?: { page?: number; q?: string }) => Promise<void>;
+  fetch: (params?: { page?: number; q?: string; pageSize?: number }) => Promise<void>;
   get: (id: string) => Promise<GraduateRecord>;
   create: (payload: Omit<GraduateRecord, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }) => Promise<GraduateRecord>;
   update: (id: string, updates: Partial<GraduateRecord>) => Promise<GraduateRecord>;
   remove: (id: string) => Promise<void>;
   uploadPhoto: (id: string, file: File) => Promise<GraduateRecord>;
   deletePhoto: (id: string) => Promise<void>;
+  bulkUpsert: (items: Array<Omit<GraduateRecord, 'id' | 'createdAt' | 'updatedAt'>>, options?: { mode?: 'insert'|'upsert'; matchBy?: 'email'|'name_birthDate'|'phone'|'phoneDigits' }) => Promise<{ ok: boolean; count: number }>
+  bulkDelete: (ids: string[]) => Promise<{ ok: boolean; count: number }>
 };
 
 export const useGraduates = create<GraduatesState>((set, get) => ({
@@ -28,8 +30,9 @@ export const useGraduates = create<GraduatesState>((set, get) => ({
     set({ loading: true });
     const page = params?.page ?? 1;
     const q = params?.q ? `&q=${encodeURIComponent(params.q)}` : '';
+    const ps = params?.pageSize ? `&pageSize=${params.pageSize}` : '';
     const res = await api<{ items: GraduateRecord[]; total: number; page: number; pageSize: number }>(
-      `/graduates?page=${page}${q}`,
+      `/graduates?page=${page}${q}${ps}`,
     );
     set({ items: res.items, total: res.total, loading: false, pageSize: res.pageSize, currentPage: res.page });
   },
@@ -72,5 +75,22 @@ export const useGraduates = create<GraduatesState>((set, get) => ({
     await api(`/graduates/${id}/photo${actor ? `?actor=${encodeURIComponent(actor)}` : ''}`, { method: 'DELETE' });
     const g = await get().get(id);
     set({ items: get().items.map((x) => (x.id === id ? g : x)) });
+  },
+  async bulkUpsert(items, options) {
+    const actor = useAuth.getState().me?.sub;
+    const res = await api<{ ok: boolean; count: number }>(`/graduates/bulk${actor ? `?actor=${encodeURIComponent(actor)}` : ''}`, {
+      method: 'POST',
+      body: JSON.stringify({ items, mode: options?.mode ?? 'upsert', matchBy: options?.matchBy ?? 'email' }),
+    });
+    return res;
+  },
+  async bulkDelete(ids) {
+    const actor = useAuth.getState().me?.sub;
+    const res = await api<{ ok: boolean; count: number }>(`/graduates/bulk-delete${actor ? `?actor=${encodeURIComponent(actor)}` : ''}`, {
+      method: 'POST',
+      body: JSON.stringify({ ids }),
+    });
+    set({ items: get().items.filter((g) => !ids.includes(g.id)) });
+    return res;
   },
 }));

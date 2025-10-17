@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { UserPlus, Upload, Trash2 } from "lucide-react"
 import GraduateForm from "@/components/forms/GraduateForm"
+import { api, apiForm, ApiError } from "@/lib/api"
 import { useGraduates } from "@/stores/graduates"
 import { useAuth } from "@/stores/auth"
 import { GraduateRecord, DesiredField, StatusOption, AttendanceLevel, Gender } from "@/lib/types"
@@ -14,7 +15,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { apiForm, ApiError } from "@/lib/api"
 import { Badge } from "@/components/ui/badge"
 
 export default function GraduateRegister() {
@@ -33,6 +33,8 @@ export default function GraduateRegister() {
   const [uploadingPhotos, setUploadingPhotos] = useState(false)
   const [bulkResults, setBulkResults] = useState<Array<{ filename: string; ok: boolean; matchedId?: string; reason?: string }>>([])
   const photoInputRef = useRef<HTMLInputElement | null>(null)
+  const [importMode, setImportMode] = useState<'insert'|'upsert'>('upsert')
+  const [importMatchBy, setImportMatchBy] = useState<'email'|'name_birthDate'|'phone'|'phoneDigits'>('email')
 
   useEffect(() => {
     setRecent(items.slice(0, 5))
@@ -55,12 +57,10 @@ export default function GraduateRegister() {
 
   return (
     <div className="space-y-6">
-      <div>
         <h2 className="text-3xl font-bold text-foreground mb-2">졸업생 등록</h2>
         <p className="text-muted-foreground">
           새로운 졸업생을 시스템에 등록합니다
         </p>
-      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="bg-gradient-card shadow-card cursor-pointer hover:shadow-elevated transition-all">
@@ -94,6 +94,37 @@ export default function GraduateRegister() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <Label className="text-sm font-medium mb-2 block">엑셀 업로드 모드</Label>
+                <Select value={importMode} onValueChange={(v) => setImportMode(v as typeof importMode)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="upsert">업서트(있으면 수정)</SelectItem>
+                    <SelectItem value="insert">신규만(중복 시 실패)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-sm font-medium mb-2 block">기존 데이터 매칭 기준</Label>
+                <Select
+                  value={importMatchBy}
+                  onValueChange={(v: 'email' | 'name_birthDate' | 'phone' | 'phoneDigits') => setImportMatchBy(v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="email">이메일</SelectItem>
+                    <SelectItem value="name_birthDate">이름+생일</SelectItem>
+                    <SelectItem value="phoneDigits">전화번호(숫자만)</SelectItem>
+                    <SelectItem value="phone">전화번호(하이픈 포함)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <Button
               variant="outline"
               className="w-full mt-2"
@@ -243,37 +274,33 @@ export default function GraduateRegister() {
                       return msgs
                     }
 
+                    const payloads: Omit<GraduateRecord, 'id' | 'createdAt' | 'updatedAt'>[] = []
                     for (let i = 0; i < rows.length; i++) {
                       const r = rows[i]
                       if (r.length === 0 || r.every((c) => c.trim() === "")) continue
+                      const clientErrors = validateRow(r)
+                      if (clientErrors.length > 0) {
+                        failed++
+                        errors.push(`${i + 2}행 유효성 오류: ${clientErrors.join('; ')}`)
+                        continue
+                      }
+                      const payload = mapRowToCreatePayload(r)
+                      payloads.push(payload as unknown as Omit<GraduateRecord, 'id' | 'createdAt' | 'updatedAt'>)
+                    }
+                    if (payloads.length > 0) {
                       try {
-                        const clientErrors = validateRow(r)
-                        if (clientErrors.length > 0) {
-                          failed++
-                          errors.push(`${i + 2}행 유효성 오류: ${clientErrors.join('; ')}`)
-                          continue
-                        }
-                        const payload = mapRowToCreatePayload(r)
-                        await useGraduates.getState().create(payload as unknown as Omit<GraduateRecord, 'id' | 'createdAt' | 'updatedAt'>)
-                        success++
+                        const actor = me?.sub
+                        await api<{ ok: boolean; count: number }>(`/graduates/bulk${actor ? `?actor=${encodeURIComponent(actor)}` : ''}` , {
+                          method: 'POST',
+                          body: JSON.stringify({ items: payloads, mode: importMode, matchBy: importMatchBy }),
+                        })
+                        success = payloads.length
                       } catch (err: unknown) {
                         let msg = err instanceof Error ? err.message : ''
                         const apiErr = err as ApiError
-                        if (apiErr && Array.isArray(apiErr.errors) && apiErr.errors.length > 0) {
-                          const detail = apiErr.errors.map(e => `${colRefByField(e.field)}: ${e.message}`).join('; ')
-                          msg = `서버 검증 실패 - ${detail}`
-                        } else if (apiErr && apiErr.message) {
-                          msg = apiErr.message
-                        }
-                        if (!msg) {
-                          try {
-                            msg = JSON.stringify(err)
-                          } catch {
-                            msg = String(err)
-                          }
-                        }
-                        failed++
-                        errors.push(`${i + 2}행 처리 실패: ${msg || "알 수 없는 오류"}`)
+                        msg = apiErr?.message || msg || '서버 오류'
+                        failed += payloads.length
+                        errors.push(msg)
                       }
                     }
                   }
