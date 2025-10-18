@@ -336,6 +336,7 @@ export default function GraduateSearch() {
                   <SelectValue placeholder="졸업연도 선택" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="">전체</SelectItem>
                   {graduationYears.map(year => (
                     <SelectItem key={year} value={year.toString()}>{year}년</SelectItem>
                   ))}
@@ -350,6 +351,7 @@ export default function GraduateSearch() {
                   <SelectValue placeholder="성별 선택" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="">전체</SelectItem>
                   <SelectItem value="남">남</SelectItem>
                   <SelectItem value="여">여</SelectItem>
                 </SelectContent>
@@ -379,6 +381,7 @@ export default function GraduateSearch() {
                   <SelectValue placeholder="학과 선택" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="">전체</SelectItem>
                   {departments.map(dept => (
                     <SelectItem key={dept} value={dept}>{dept}</SelectItem>
                   ))}
@@ -393,6 +396,7 @@ export default function GraduateSearch() {
                   <SelectValue placeholder="희망분야 선택" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="">전체</SelectItem>
                   {desiredFields.map(field => (
                     <SelectItem key={field} value={field}>{field}</SelectItem>
                   ))}
@@ -407,6 +411,7 @@ export default function GraduateSearch() {
                   <SelectValue placeholder="상태 선택" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="">전체</SelectItem>
                   {statusOptions.map(status => (
                     <SelectItem key={status} value={status}>{status}</SelectItem>
                   ))}
@@ -420,6 +425,7 @@ export default function GraduateSearch() {
                   <SelectValue placeholder="근태 선택" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="">전체</SelectItem>
                   <SelectItem value="상">상</SelectItem>
                   <SelectItem value="중">중</SelectItem>
                   <SelectItem value="하">하</SelectItem>
