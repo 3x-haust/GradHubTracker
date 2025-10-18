@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
@@ -496,18 +497,17 @@ export default function GraduateSearch() {
         <CardContent>
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Input
-                type="checkbox"
+              <Checkbox
                 checked={displayedGraduates.length > 0 && displayedGraduates.every((g) => selectedIds.includes(g.id))}
-                onChange={(e) => {
-                  if (e.target.checked) {
+                onCheckedChange={(checked) => {
+                  if (checked) {
                     setSelectedIds((prev) => Array.from(new Set([...prev, ...displayedGraduates.map((g) => g.id)])))
                   } else {
                     setSelectedIds((prev) => prev.filter((id) => !displayedGraduates.some((g) => g.id === id)))
                   }
                 }}
               />
-              <span className="text-sm text-muted-foreground">페이지 모두 선택</span>
+              <span className="text-sm text-muted-foreground whitespace-nowrap">페이지 모두 선택</span>
               <Button
                 variant="outline"
                 size="sm"
@@ -529,7 +529,7 @@ export default function GraduateSearch() {
               </Button>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">페이지당</span>
+              <span className="text-sm text-muted-foreground whitespace-nowrap">페이지당</span>
               <Select value={String(pageSizeChoice)} onValueChange={async (v) => {
                 const n = Number(v)
                 setPageSizeChoice(n)
@@ -540,6 +540,10 @@ export default function GraduateSearch() {
                   } catch {
                     setError("페이지 크기 변경에 실패했습니다.")
                   }
+                }
+                if (hasActiveFilters) {
+                  // Recompute displayed graduates slice with new page size
+                  setFilteredGraduates((prev) => [...prev])
                 }
               }}>
                 <SelectTrigger className="w-[100px]">
@@ -559,11 +563,9 @@ export default function GraduateSearch() {
               <div key={graduate.id} className="border rounded-lg p-4 bg-card hover:shadow-card transition-shadow">
                 <div className="flex items-start gap-4">
                   <div className="pt-1">
-                    <Input
-                      type="checkbox"
+                    <Checkbox
                       checked={selectedIds.includes(graduate.id)}
-                      onChange={(e) => {
-                        const checked = e.target.checked
+                      onCheckedChange={(checked) => {
                         setSelectedIds((prev) => checked ? [...prev, graduate.id] : prev.filter((id) => id !== graduate.id))
                       }}
                     />

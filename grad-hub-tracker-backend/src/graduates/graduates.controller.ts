@@ -37,8 +37,16 @@ export class GraduatesController {
   constructor(private service: GraduatesService) {}
 
   @Get()
-  list(@Query('page') page?: string, @Query('q') q?: string) {
-    return this.service.findAll({ page: page ? Number(page) : 1, q });
+  list(
+    @Query('page') page?: string,
+    @Query('q') q?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return this.service.findAll({
+      page: page ? Number(page) : 1,
+      q,
+      pageSize: pageSize ? Number(pageSize) : undefined,
+    });
   }
 
   @Get('stats')
