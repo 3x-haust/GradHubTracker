@@ -331,12 +331,12 @@ export default function GraduateSearch() {
             
             <div>
               <label className="text-sm font-medium mb-2 block">졸업연도</label>
-              <Select value={searchFilters.graduationYear} onValueChange={(value) => setSearchFilters({...searchFilters, graduationYear: value})}>
+              <Select value={searchFilters.graduationYear} onValueChange={(value) => setSearchFilters({...searchFilters, graduationYear: value === "__all__" ? "" : value})}>
                 <SelectTrigger>
                   <SelectValue placeholder="졸업연도 선택" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">전체</SelectItem>
+                  <SelectItem value="__all__">전체</SelectItem>
                   {graduationYears.map(year => (
                     <SelectItem key={year} value={year.toString()}>{year}년</SelectItem>
                   ))}
@@ -346,12 +346,12 @@ export default function GraduateSearch() {
 
             <div>
               <label className="text-sm font-medium mb-2 block">성별</label>
-              <Select value={searchFilters.gender} onValueChange={(value) => setSearchFilters({...searchFilters, gender: value})}>
+              <Select value={searchFilters.gender} onValueChange={(value) => setSearchFilters({...searchFilters, gender: value === "__all__" ? "" : value})}>
                 <SelectTrigger>
                   <SelectValue placeholder="성별 선택" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">전체</SelectItem>
+                  <SelectItem value="__all__">전체</SelectItem>
                   <SelectItem value="남">남</SelectItem>
                   <SelectItem value="여">여</SelectItem>
                 </SelectContent>
@@ -376,12 +376,12 @@ export default function GraduateSearch() {
 
             <div>
               <label className="text-sm font-medium mb-2 block">학과</label>
-              <Select value={searchFilters.department} onValueChange={(value) => setSearchFilters({...searchFilters, department: value})}>
+              <Select value={searchFilters.department} onValueChange={(value) => setSearchFilters({...searchFilters, department: value === "__all__" ? "" : value})}>
                 <SelectTrigger>
                   <SelectValue placeholder="학과 선택" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">전체</SelectItem>
+                  <SelectItem value="__all__">전체</SelectItem>
                   {departments.map(dept => (
                     <SelectItem key={dept} value={dept}>{dept}</SelectItem>
                   ))}
@@ -391,12 +391,12 @@ export default function GraduateSearch() {
 
             <div>
               <label className="text-sm font-medium mb-2 block">희망분야</label>
-              <Select value={searchFilters.desiredField} onValueChange={(value) => setSearchFilters({...searchFilters, desiredField: value})}>
+              <Select value={searchFilters.desiredField} onValueChange={(value) => setSearchFilters({...searchFilters, desiredField: value === "__all__" ? "" : value})}>
                 <SelectTrigger>
                   <SelectValue placeholder="희망분야 선택" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">전체</SelectItem>
+                  <SelectItem value="__all__">전체</SelectItem>
                   {desiredFields.map(field => (
                     <SelectItem key={field} value={field}>{field}</SelectItem>
                   ))}
@@ -406,12 +406,12 @@ export default function GraduateSearch() {
 
             <div>
               <label className="text-sm font-medium mb-2 block">현재상태</label>
-              <Select value={searchFilters.currentStatus} onValueChange={(value) => setSearchFilters({...searchFilters, currentStatus: value})}>
+              <Select value={searchFilters.currentStatus} onValueChange={(value) => setSearchFilters({...searchFilters, currentStatus: value === "__all__" ? "" : value})}>
                 <SelectTrigger>
                   <SelectValue placeholder="상태 선택" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">전체</SelectItem>
+                  <SelectItem value="__all__">전체</SelectItem>
                   {statusOptions.map(status => (
                     <SelectItem key={status} value={status}>{status}</SelectItem>
                   ))}
@@ -420,12 +420,12 @@ export default function GraduateSearch() {
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">근태</label>
-              <Select value={searchFilters.attendance} onValueChange={(value) => setSearchFilters({...searchFilters, attendance: value})}>
+              <Select value={searchFilters.attendance} onValueChange={(value) => setSearchFilters({...searchFilters, attendance: value === "__all__" ? "" : value})}>
                 <SelectTrigger>
                   <SelectValue placeholder="근태 선택" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">전체</SelectItem>
+                  <SelectItem value="__all__">전체</SelectItem>
                   <SelectItem value="상">상</SelectItem>
                   <SelectItem value="중">중</SelectItem>
                   <SelectItem value="하">하</SelectItem>
